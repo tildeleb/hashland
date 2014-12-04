@@ -2,6 +2,7 @@
 
 // This package contains various transliteration of Jenkins hash funcions.
 // This includes lookup3.c and some other Jenkins functions that appear to be based on lookup2.c.
+// See http://burtleburtle.net/bob/c/lookup3.c and http://burtleburtle.net/bob/hash/evahash.html
 
 package jenkins
 import (
