@@ -33,6 +33,10 @@ func tdiff(begin, end time.Time) time.Duration {
     return d
 }
 
+func TestCheck(t *testing.T) {
+	jenkins.Check()
+}
+
 func TestBasic(t *testing.T) {
 
 	q := "This is the time for all good men to come to the aid of their country..."
@@ -93,6 +97,32 @@ func TestBasic(t *testing.T) {
 		t.FailNow()
 	}
 
+}
+
+func TestHash32v(t *testing.T) {
+	k := make([]byte, 30, 30)
+	seed := uint32(0)
+	for i := 0; i < len(k); i++ {
+		h := jenkins.Hash232(k[:i], seed)
+		fmt.Printf("i=%03d, h=0x%08x, k=%v\n", i, h, k[:i]) // 0x8965bbe9
+	}
+}
+
+
+func TestHash32(t *testing.T) {
+	k := make([]byte, 4, 4)
+	k = k[:]
+	seed := uint32(0)
+	h := jenkins.Hash232(k, seed)
+	fmt.Printf("k=%v, h=0x%08x\n", k, h) // 0x8965bbe9
+}
+
+func TestHash64(t *testing.T) {
+	k := make([]byte, 24, 24)
+	k = k[:]
+	seed := uint64(0)
+	h := jenkins.Hash264(k, seed)
+	fmt.Printf("k=%v, h=0x%016x\n", k, h) // 0x74882dd69da95fae
 }
 
 func BenchmarkJenkins332(b *testing.B) {

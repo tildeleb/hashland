@@ -175,8 +175,10 @@ func bench(n int, c, d int, dbl bool) {
 	}
 	stop := time.Now()
 	dur := tdiff(start, stop)
-	hsec := hrff.Float64{(float64(n) / dur.Seconds()), " hashes/sec"}
-	fmt.Printf("bench: %H\n", hsec)
+	hsec := hrff.Float64{(float64(n) / dur.Seconds()), "hashes/sec"}
+	bsec := hrff.Float64{(float64(n)*8 / dur.Seconds()), "B/sec"}
+	fmt.Printf("bench: %h\n", hsec)
+	fmt.Printf("bench: %h\n", bsec)
 }
 
 var n = flag.Int("n", 5, "number of hashes")

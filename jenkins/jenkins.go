@@ -63,22 +63,75 @@ func mix32(a, b, c uint32) (uint32, uint32, uint32) {
 	return a, b, c
 }
 
+func mix32a(a, b, c uint32) (uint32, uint32, uint32) {
+	a = a - b - c ^ (c>>13)
+	b = b - c - a ^ (a<<8)
+	c = c - a - b ^ (b>>13)
+	a = a - b - c ^ (c>>12)
+	b = b - c - a ^ (a<<16)
+	c = c - a - b ^ (b>>5)
+	a = a - b - c ^ (c>>3)
+	b = b - c - a ^ (a<<10)
+	c = c - a - b ^ (b>>15)
+	return a, b, c
+}
+
+func Check() {
+	var a, b, c uint32
+	var init = func() {
+		a, b, c = 0x12345678, 0x87654321, 0xdeadbeef
+	}
+
+	init()
+	a=a-b;  a=a-c;  	fmt.Printf("a=0x%08x\n", a); a=a^(c>>13); 	fmt.Printf("a=0x%08x\n", a)
+	fmt.Printf("a=0x%08x, b=0x%08x, c=0x%08x\n", a, b, c)
+	init()
+	a = ((a - b) - c)
+	fmt.Printf("a=0x%08x\n", a)
+	a = a ^ (c>>13)
+	fmt.Printf("a=0x%08x\n", a)
+	fmt.Printf("a=0x%08x, b=0x%08x, c=0x%08x\n", a, b, c)
+}
+
+// This makes a new slice of uint64 that points to the same slice passed in as []byte.
+// We should check alignment for architectures that don't handle unaligned reads.
+// Fallback to a copy or maybe use encoding/binary?
+// Not sure what the right thing to do is for little vs big endian?
+// What are the right test vevtors for big-endian machines.
+func sliceUI32(in []byte) []uint32 {
+    return (*(*[]uint32)(unsafe.Pointer(&in)))[:len(in)/4]
+}
+
 // Jenkin's second generation 32 bit hash.
 // Benchmarked with 4 byte key, inlining, and no store of hash at:
 // benchmark32: 55 Mhashes/sec
 // benchmark32: 219 MB/sec
 func Hash232(k []byte, seed uint32) uint32 {
+	var fast = true // fast is really much faster
 	l := uint32(len(k))
 	a  := uint32(0x9e3779b9)	// the golden ratio; an arbitrary value
 	b := a
-	c := seed				// variable initialization of internal state
+	c := seed					// variable initialization of internal state
 
-	for ; l >= 12; l -= 12 {
-		a += uint32(k[0]) + uint32(k[1]) << 8 + uint32(k[2]) << 16 + uint32(k[3]) << 24
-		b += uint32(k[4]) + uint32(k[5]) << 8 + uint32(k[6]) << 16 + uint32(k[7]) << 24
-		c += uint32(k[8]) + uint32(k[9]) << 8 + uint32(k[10]) << 16 + uint32(k[11]) << 24
-		a, b, c = mix32(a, b, c)
-		k = k[12:]
+	if fast {
+		k32 := sliceUI32(k)
+		cnt := 0
+		for ; l >= 12; l -= 12 {
+			a += k32[0 + cnt]
+			b += k32[1 + cnt]
+			c += k32[2 + cnt]
+			a, b, c = mix32(a, b, c)
+			k = k[12:]
+			cnt += 3
+		}
+	} else {
+		for ; l >= 12; l -= 12 {
+			a += uint32(k[0]) + uint32(k[1]) << 8 + uint32(k[2]) << 16 + uint32(k[3]) << 24
+			b += uint32(k[4]) + uint32(k[5]) << 8 + uint32(k[6]) << 16 + uint32(k[7]) << 24
+			c += uint32(k[8]) + uint32(k[9]) << 8 + uint32(k[10]) << 16 + uint32(k[11]) << 24
+			a, b, c = mix32(a, b, c)
+			k = k[12:]
+		}
 	}
 
 	c += l
@@ -119,7 +172,7 @@ func Hash232(k []byte, seed uint32) uint32 {
 	case 0:
 		break
 	default:
-		panic("HashWords64")
+		panic("HashWords32")
    }
    a, b, c = mix32(a, b, c)
    return c
@@ -141,39 +194,56 @@ func mix64(a, b, c uint64) (uint64, uint64, uint64) {
 	return a, b, c
 }
 
+
+func mix64aa(a, b, c uint64) (uint64, uint64, uint64) {
+	a = a - b - c ^ (c>>43)
+	b = b - c - a ^ (a<<9)
+	c = c - a - b ^ (b>>8)
+	a = a - b - c ^ (c>>38)
+	b = b - c - a ^ (a<<23)
+	c = c - a - b ^ (b>>5)
+	a = a - b - c ^ (c>>35)
+	b = b - c - a ^ (a<<49)
+	c = c - a - b ^ (b>>11)
+	a = a - b - c ^ (c>>12)
+	b = b - c - a ^ (a<<18)
+	c = c - a - b ^ (b>>22)
+	return a, b, c
+}
+
 func mix64a(a, b, c uint64) (uint64, uint64, uint64) {
-	a=a-b;  a=a-c;  a=a^(c>>43);
-	b=b-c;  b=b-a;  b=b^(a<<9);
+	a = a - b - c ^ (c>>43)
+	b = b - c - a ^ (a<<9)
 	return a, b, c
 }
 
 func mix64b(a, b, c uint64) (uint64, uint64, uint64) {
-	c=c-a;  c=c-b;  c=c^(b>>8);
-	a=a-b;  a=a-c;  a=a^(c>>38);
+	c = c - a - b ^ (b>>8)
+	a = a - b - c ^ (c>>38)
 	return a, b, c
 }
 
 func mix64c(a, b, c uint64) (uint64, uint64, uint64) {
-	b=b-c;  b=b-a;  b=b^(a<<23);
-	c=c-a;  c=c-b;  c=c^(b>>5);
+	b = b - c - a ^ (a<<23)
+	c = c - a - b ^ (b>>5)
 	return a, b, c
 }
 
 func mix64d(a, b, c uint64) (uint64, uint64, uint64) {
-	a=a-b;  a=a-c;  a=a^(c>>35);
-	b=b-c;  b=b-a;  b=b^(a<<49);
+	a = a - b - c ^ (c>>35)
+	b = b - c - a ^ (a<<49)
 	return a, b, c
 }
 
 func mix64e(a, b, c uint64) (uint64, uint64, uint64) {
-	c=c-a;  c=c-b;  c=c^(b>>11);
-	a=a-b;  a=a-c;  a=a^(c>>12);
+	c = c - a - b ^ (b>>11)
+	a = a - b - c ^ (c>>12)
 	return a, b, c
 }
 
 func mix64f(a, b, c uint64) (uint64, uint64, uint64) {
-	b=b-c;  b=b-a;  b=b^(a<<18);
-	c=c-a;  c=c-b;  c=c^(b>>22);
+	b = b - c - a ^ (a<<18)
+	c = c - a - b ^ (b>>22)
 	return a, b, c
 }
 
@@ -197,8 +267,9 @@ func Hash264(k []byte, seed uint64) uint64 {
 
 	//The 64-bit golden ratio is 0x9e3779b97f4a7c13LL
 	length := uint64(len(k))
-	a := uint64(0x9e3779b97f4a7c13) + length + seed
-	b, c := a, a
+	a := uint64(0x9e3779b97f4a7c13)
+	b := a
+	c := seed
 	if fast {
 		k64 := sliceUI64(k)
 		cnt := 0
@@ -213,6 +284,7 @@ func Hash264(k []byte, seed uint64) uint64 {
 			a, b, c = mix64d(a, b, c)
 			a, b, c = mix64e(a, b, c)
 			a, b, c = mix64f(a, b, c)
+			k = k[24:]
 			cnt += 3
 			length -= 24
 		}
@@ -221,12 +293,15 @@ func Hash264(k []byte, seed uint64) uint64 {
 			a += uint64(k[0]) | uint64(k[1]) << 8 | uint64(k[2]) << 16 | uint64(k[3]) << 24 | uint64(k[4]) << 32 | uint64(k[5]) << 40 | uint64(k[6]) << 48 | uint64(k[7]) << 56
 			b += uint64(k[8]) | uint64(k[9]) << 8 | uint64(k[10]) << 16 | uint64(k[11]) << 24 | uint64(k[12]) << 32 | uint64(k[13]) << 40 | uint64(k[14]) << 48 | uint64(k[15]) << 56
 			c += uint64(k[16]) | uint64(k[17]) << 8 | uint64(k[18]) << 16 | uint64(k[19]) << 24 | uint64(k[20]) << 32 | uint64(k[21]) << 40 | uint64(k[22]) << 48 | uint64(k[23]) << 56
-			a, b, c = mix64(a, b, c)
+			a, b, c = mix64aa(a, b, c)
 			k = k[24:]
 			length -= 24
 		}
 	}
 	c += length
+	if len(k) > 23 {
+		panic("Hash264")
+	}
 	switch length {
 	case 23:
 		c += uint64(k[22]) << 56
@@ -301,6 +376,7 @@ func Hash264(k []byte, seed uint64) uint64 {
 	default:
 		panic("HashWords64")
 	}
+	a, b, c = mix64aa(a, b, c)
 	return c
 }
 
@@ -548,6 +624,10 @@ func XHashWords(k []uint32, length int, seed uint32) uint32 {
 // If you want a 64-bit value do something like "*pc + (((uint64_t)*pb)<<32)"
 func Jenkins364(k []byte, length int, pc, pb uint32) (rpc, rpb uint32) {
 	var a, b, c uint32
+
+	if length == 0 {
+		length = len(k)
+	}
 /*
 	var rot = func(x, k uint32) uint32 {
 		return x << k | x >> (32 - k)

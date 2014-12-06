@@ -27,7 +27,7 @@
 // slower than MD5.
 //
 
-package main
+package spooky
 
 import "fmt"
 import "unsafe"
@@ -457,6 +457,7 @@ var expected= []uint64{
     0x27c2e04b,0x0b7523bd,0x07305776,0xc6be7503,0x918fa7c9,0xaf2e2cd9,0x82046f8e,0xcc1c8250,
 }
 
+/*
 func main() {
     buf := make([]byte, 512, 512)
     saw := make([]uint32, 512, 512)
@@ -470,5 +471,5 @@ func main() {
             fmt.Printf("%d: saw 0x%08x, expected 0x%08x\n", i, saw[i], expected[i]);
         }
     }
-
 }
+*/

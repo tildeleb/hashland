@@ -19,7 +19,7 @@ this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 package siphash
 
 import "fmt"
-
+import "unsafe"
 /* default: SipHash-2-4 */
 const (
     Crounds  = 2
@@ -69,18 +69,36 @@ func TRACE(inlen int, v0, v1, v2, v3 uint64) {
 	fmt.Printf( "(%3d) v3 %08x %08x\n", inlen, v3 >> 32, v3&0xFFFFFFFF)
 }
 
+// This makes a new slice of uint64 that points to the same slice passed in as []byte.
+// We should check alignment for architectures that don't handle unaligned reads.
+// Fallback to a copy or maybe use encoding/binary?
+// Not sure what the right thing to do is for little vs big endian?
+// What are the right test vevtors for big-endian machines.
+func sliceUI64(in []byte) []uint64 {
+    return (*(*[]uint64)(unsafe.Pointer(&in)))[:len(in)/8]
+}
+
 // take input slice in and seeds k as well a compression and final rounds cr, dr
 // return a 64 bit hash in ra and if dbl is true a 128 bit hash in ra and rb
 func Siphash(in []byte, k []byte, cr, dr int, dbl bool) (ra, rb uint64) {
+	var fast = true
+	var v0, v1, v2, v3 uint64
+	var sipround = func() {
+		v0 += v1; v1=rotl(v1,13); v1 ^= v0; v0=rotl(v0,32);
+		v2 += v3; v3=rotl(v3,16); v3 ^= v2;
+		v0 += v3; v3=rotl(v3,21); v3 ^= v0;
+		v2 += v1; v1=rotl(v1,17); v1 ^= v2; v2=rotl(v2,32);
+	}
+
 	if len(k) != 16 || cr <= 0 || dr <= 0 {
 		panic("siphash")
 	}
 	// initialize state
 	/* "somepseudorandomlygeneratedbytes" */
-	v0 := uint64(0x736f6d6570736575)
-	v1 := uint64(0x646f72616e646f6d)
-	v2 := uint64(0x6c7967656e657261)
-	v3 := uint64(0x7465646279746573)
+	v0 = uint64(0x736f6d6570736575)
+	v1 = uint64(0x646f72616e646f6d)
+	v2 = uint64(0x6c7967656e657261)
+	v3 = uint64(0x7465646279746573)
 
 	k0 := U8tou64le(k)
 	k1 := U8tou64le(k[8:])
@@ -96,17 +114,38 @@ func Siphash(in []byte, k []byte, cr, dr int, dbl bool) (ra, rb uint64) {
 		v1 ^= 0xee
 	}
 
+	k64 := sliceUI64(in)
+	cnt := 0
+	l := len(in)
 	// peel off as many 64 bit words as we have
-	for ; len(in) >= 8; in = in[8:] {
-    	m := U8tou64le(in)
-    	v3 ^= m
+	if fast {
+		for ; l >= 8; in = in[8:] {
+	    	m := k64[cnt]
+	    	cnt++
+	    	l -= 8
+	    	v3 ^= m
 
-		//TRACE(len(in), v0, v1, v2, v3)
-    	for i := 0; i < cr; i++ {
-    		v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
-    		v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+			//TRACE(len(in), v0, v1, v2, v3)
+	    	for i := 0; i < cr; i++ {
+	    		sipround()
+	    		//v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
+	    		//v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+			}
+			v0 ^= m
 		}
-		v0 ^= m
+	} else {
+		for ; len(in) >= 8; in = in[8:] {
+	    	m := U8tou64le(in)
+	    	v3 ^= m
+
+			//TRACE(len(in), v0, v1, v2, v3)
+	    	for i := 0; i < cr; i++ {
+	    		sipround()
+	    		//v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
+	    		//v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+			}
+			v0 ^= m
+		}
 	}
 
 	//fmt.Printf("in=%v, len(in)=%d\n", in, len(in))
@@ -143,8 +182,9 @@ func Siphash(in []byte, k []byte, cr, dr int, dbl bool) (ra, rb uint64) {
 
 	//TRACE(len(in), v0, v1, v2, v3)
 	for i := 0; i < cr; i++ {
-		v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
-		v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+		sipround()
+		//v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
+		//v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
 	}
 	v0 ^= b
 
@@ -156,8 +196,9 @@ func Siphash(in []byte, k []byte, cr, dr int, dbl bool) (ra, rb uint64) {
 
 	//TRACE(len(in), v0, v1, v2, v3)
 	for i := 0; i < dr; i++ {
-		v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
-		v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+		sipround()
+		//v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
+		//v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
 	}
 	b = v0 ^ v1 ^ v2  ^ v3
 	ra = b
@@ -167,8 +208,9 @@ func Siphash(in []byte, k []byte, cr, dr int, dbl bool) (ra, rb uint64) {
   		v1 ^= 0xdd
 		//TRACE(len(in), v0, v1, v2, v3)
 		for i := 0; i < dr; i++ {
-    		v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
-    		v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
+			sipround()
+    		//v0, v1, v2, v3 = siprounda(v0, v1, v2, v3)
+    		//v0, v1, v2, v3 = siproundb(v0, v1, v2, v3)
 		}
 		b = v0 ^ v1 ^ v2  ^ v3
 		rb = b
