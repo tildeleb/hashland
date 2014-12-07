@@ -45,7 +45,7 @@ type HashTable struct {
 }
 
 var hashFunctions = []string{"MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
-	"skein256xor", "sha1160", "keccak160l",
+	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l",
 	}
 var hf2 string
 func hashf(k []byte) uint32 {
@@ -117,6 +117,20 @@ func hashf(k []byte) uint32 {
 		} else {
 	    	return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[1])<<8 | uint32(fp[2])
 	    }
+	case "skein256low":
+		skein256.Reset()
+		skein256.Write(k)
+		fp = fp[0:0]
+		fp := skein256.Sum(fp)
+		//fmt.Printf("skein256: fp=%v\n", fp)
+    	return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[1])<<8 | uint32(fp[2])
+	case "skein256hi":
+		skein256.Reset()
+		skein256.Write(k)
+		fp = fp[0:0]
+		fp := skein256.Sum(fp)
+		//fmt.Printf("skein256: fp=%v\n", fp)
+    	return uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31])
 	case "sha1160":
 		sha1160.Reset()
 		sha1160.Write(k)
