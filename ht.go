@@ -492,6 +492,7 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 		fmt.Printf("lines=%d, inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
 			s.Lines, s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
 	}
+	fmt.Printf("file=%q\n", file)
 	for {
 		switch {
 		case *A:
@@ -545,14 +546,14 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 			*G = false
 			fmt.Printf("\n")
 		case *H:
-			fmt.Printf("TestH\n")
+			fmt.Printf("TestH (words from letter combinations)\n")
 			for _, hf2 = range hf {
 				s = TestH(file, hf2)
 				print(s)
 			}
 			*H = false
 		case *I:
-			fmt.Printf("TestI\n")
+			fmt.Printf("TestI (one bit keys)\n")
 			for _, hf2 = range hf {
 				s = TestI(file, hf2)
 				print(s)
