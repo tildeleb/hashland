@@ -12,6 +12,8 @@ import (
 	"bufio"
 	"hash"
 	"crypto/sha1"
+	"github.com/tildeleb/hashland/sbox"
+	"github.com/tildeleb/hashland/crapwow"
 	"github.com/tildeleb/hashland/jenkins"
 	"github.com/tildeleb/hashland/mahash"
 	"github.com/tildeleb/hashland/spooky"
@@ -26,7 +28,7 @@ import (
 var k160 hash.Hash
 var skein256 hash.Hash
 var sha1160 hash.Hash
-var hashFunctions = []string{"MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
+var hashFunctions = []string{"sbox", "CrapWow", "MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
 	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l",
 	}
 var hf2 string
@@ -60,6 +62,13 @@ func hashf(k []byte) uint32 {
 	var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	var fp = make([]byte, 32)
 	switch hf2 {
+	case "sbox":
+		hash := sbox.Sbox(k, 0)
+		return hash
+	case "CrapWow":
+		hash := crapwow.CrapWow(k, 0)
+		//fmt.Printf("key=%q, hash=0x%08x\n", string(k), hash)
+		return hash
 	case "MaHash8v64":
 		h64 := mahash.MaHash8v64(k)
 		return uint32(h64)
@@ -530,8 +539,19 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 	var s *HashTable
 	var print = func(s *HashTable) {
 		q := s.HashQuality()
-		fmt.Printf("lines=%d, inserts=%d, size=%d, cols=%d, probes=%d, heads=%d, buckets=%d, entries=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, q=%0.2f\n",
-			s.Lines, s.Inserts, s.Size, s.Cols, s.Probes, s.Heads, s.Nbuckets, s.Entries, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, q)
+		if *oa {
+			if s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries {
+				panic("runTestsWithFileAndHashes")
+			}
+			fmt.Printf("lines=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
+				s.Lines, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
+		} else {
+			if s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries {
+				panic("runTestsWithFileAndHashes")
+			}
+			fmt.Printf("lines=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
+				s.Lines, s.Size, s.Nbuckets, s.Dups, q)
+		}
 	}
 	fmt.Printf("file=%q\n", file)
 	for {
