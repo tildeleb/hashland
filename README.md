@@ -13,9 +13,15 @@ The "hash land" application evaluates the quality of each hash function with rea
 
 Introduction
 ------------
-As part of another project I decided to write some hash functions in Go and test them out. There are no "bad" hash functions here. Must of these do a very good job of hashing keys with good distribution. However, my tests and dictionaries are still very basic. I've been focused on getting the hash functions written.
+I was frustrated that the core Go libraries didn't contain a useful set of hash functions for constructing hash tables. As part of another project I decided to write some hash functions in Go, fork some from other repositories, and test them out. There are no "bad" hash functions here. Most of these do a very good job of hashing keys with good distribution and few duplicate hashes. However, my tests and dictionaries are still very basic. I've been focused on getting the hash functions written and some testing infrastructure up and running.
 
-Don't use the non crypto hash functions if you have uncontrolled input or an adversary. If you do use at least SipHash.
+Performance
+-----------
+Some of these are woefully lacking in performance. Most will be difficult to improve in pure Go. Not sure what I am going to do about that right now.
+
+Warning
+-------
+*Don't use the non crypto hash functions if you have uncontrolled inputs (i.e. a web based API or web facing data inputs or an adversary. If you do, use at least SipHash or one of the other crypto hash functions.*
 
 Next Steps
 ----------
