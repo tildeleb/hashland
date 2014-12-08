@@ -1,3 +1,4 @@
+// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
 package main
 
 // based on http://amsoftware.narod.ru/algo.html
@@ -38,7 +39,11 @@ type Stats struct {
 	Inserts int
 	Cols int
 	Probes int
+	Heads int
 	Dups int
+	Nbuckets int
+	Entries int
+	Q float64
 	//
 	Lines int
 	Size uint32
@@ -47,7 +52,7 @@ type Stats struct {
 }
 
 type HashTable struct {
-	Buckets []Bucket
+	Buckets [][]Bucket
 	Stats
 }
 
@@ -164,7 +169,7 @@ func NewHashTable(lines int) *HashTable {
 		ht.Size = uint32(primes.NextPrime(int(ht.Size)))
 	}
 	ht.SizeMask = ht.Size - 1
-	ht.Buckets = make([]Bucket, ht.Size, ht.Size)
+	ht.Buckets = make([][]Bucket, ht.Size, ht.Size)
 	return ht
 }
 
@@ -180,41 +185,84 @@ func (ht *HashTable) Add(k []byte) {
 	//fmt.Printf("index=%d\n", idx)
 	cnt := 0
 	pass := 0
+
+	//fmt.Printf("Add: %s\n", k)
+	//ht.Buckets[idx].Key = k
+	//len(ht.Buckets[idx].Key) == 0
 	for {
-		if len(ht.Buckets[idx].Key) == 0 {
-			//fmt.Printf("Add: %s\n", k)
-			//ht.Buckets[idx].Key = make([]byte, len(k), len(k))
-			//ht.Buckets[idx].Key = ht.Buckets[idx].Key[:]
-			//copy(ht.Buckets[idx].Key, k)
-			ht.Buckets[idx].Key = k
-			//fmt.Printf("Add: %s\n", ht.Buckets[idx].Key)
+		if ht.Buckets[idx] == nil {
+			// no entry or chain at this location, make it
+			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
+			//fmt.Printf("Add: len=%d, %s\n", len(ht.Buckets[idx]), ht.Buckets[idx][0].Key)
 			ht.Probes++
+			ht.Heads++
 			return
 		}
-		if cnt == 0 {
-			ht.Cols++
+		if *oa {
+			if cnt == 0 {
+				ht.Cols++
+			} else {
+				ht.Probes++
+			}
+
+			// check for a duplicate key
+			h := hashf(ht.Buckets[idx][0].Key)
+			if h == hash {
+				if *pd {
+					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", hash, idx, k)
+					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, ht.Buckets[idx][0].Key)
+				}
+				ht.Dups++
+			}
+			idx++
+			cnt++
+			if idx > uint32(ht.Size) - 1 {
+				pass++
+				if pass > 1 {
+					panic("Add: pass")
+				}
+				idx = 0
+			}
 		} else {
+			// first scan slice for dups
+			for j := range ht.Buckets[idx] {
+				h := hashf(ht.Buckets[idx][j].Key)
+				if h == hash {
+					if *pd {
+						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", hash, idx, k)
+						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, ht.Buckets[idx][0].Key)
+					}
+					ht.Dups++
+				}
+			}
+			// add element
+			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
 			ht.Probes++
-		}
-		// check for a duplicate key
-		h := hashf(ht.Buckets[idx].Key)
-		if h == hash {
-			if *pd {
-				fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", hash, idx, k)
-				fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, ht.Buckets[idx].Key)
-			}
-			ht.Dups++
-		}
-		idx++
-		cnt++
-		if idx > uint32(ht.Size) - 1 {
-			pass++
-			if pass > 1 {
-				panic("Add: pass")
-			}
-			idx = 0
+			break
 		}
 	}
+}
+
+// The theoretical metric from "Red Dragon Book"
+func (ht *HashTable) HashQuality() float64 {
+	n := float64(0.0)
+	buckets := 0
+	entries := 0
+	for _, v := range ht.Buckets {
+		if v != nil {
+			buckets++
+			count := float64(len(v))
+			entries += len(v)
+			n += count * (count + 1.0)
+		}
+	}
+	n *= float64(ht.Size)
+	d := float64(ht.Inserts) * (float64(ht.Inserts) + 2.0 * float64(ht.Size) - 1.0) 	// (n / 2m) * (n + 2m - 1)
+	//fmt.Printf("buckets=%d, entries=%d, inserts=%d, size=%d, n=%f, d=%f, n/d=%f\n", buckets, entries, ht.Inserts, ht.Size, n, d, n/d)
+	ht.Nbuckets = buckets
+	ht.Entries = entries
+	ht.Q = n / d
+	return n / d
 }
 
 // Henry Warren, "Hacker's Delight", ch. 5.3
@@ -291,9 +339,8 @@ func ReadFile(file string, cb func(line string)) int {
     }
 }
 
-func TestA(file string, hf2 string) Stats {
+func TestA(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 /*
 	var countlines = func(line string) {
 		lines++
@@ -310,12 +357,11 @@ func TestA(file string, hf2 string) Stats {
 	ht = NewHashTable(lines)
 	//fmt.Printf("ht=%v\n", ht)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
-func TestB(file string, hf2 string) Stats {
+func TestB(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line += "\n"
 		ht.Add([]byte(line))
@@ -324,12 +370,11 @@ func TestB(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
-func TestC(file string, hf2 string) Stats {
+func TestC(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line += line + "\n\n\n\n"
 		ht.Add([]byte(line))
@@ -338,12 +383,11 @@ func TestC(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
-func TestD(file string, hf2 string) Stats {
+func TestD(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line = "ABCDE" + line
 		ht.Add([]byte(line))
@@ -352,12 +396,11 @@ func TestD(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
-func TestE(file string, hf2 string) Stats {
+func TestE(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line = line + line
 		ht.Add([]byte(line))
@@ -366,12 +409,11 @@ func TestE(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats 
+	return
 }
 
-func TestF(file string, hf2 string) Stats {
+func TestF(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line = line + line + line + line
 		ht.Add([]byte(line))
@@ -380,7 +422,7 @@ func TestF(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
 func reverse(s string) string {
@@ -390,9 +432,8 @@ func reverse(s string) string {
 	return reverse(s[1:]) + string(s[0])
 }
 
-func TestG(file string, hf2 string) Stats {
+func TestG(file string, hf2 string) (ht *HashTable) {
 	//var lines int
-	var ht *HashTable
 	var addLine = func(line string) {
 		line2 := reverse(line)
 		//fmt.Printf("line=%q, line2=%q", line, line2)
@@ -402,12 +443,11 @@ func TestG(file string, hf2 string) Stats {
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
-	return ht.Stats
+	return
 }
 
-func TestH(file string, hf2 string) Stats {
+func TestH(file string, hf2 string) (ht *HashTable) {
 	var cnt int
-	var ht *HashTable
 	var counter = func(word string) {
 		cnt++
 	}
@@ -420,16 +460,16 @@ func TestH(file string, hf2 string) Stats {
 	fmt.Printf("\t%20q: ", hf2)
 	ht = NewHashTable(cnt)
 	genWords(test, addWord)
-	return ht.Stats
+	return
 }
 
-func TestI(file string, hf2 string) Stats {
+func TestI(file string, hf2 string) (ht *HashTable) {
 	length := 900
 	keys := length * 8
 	key := make([]byte, length, length)
 	key = key[:]
 	fmt.Printf("\t%20q: ", hf2)
-	ht := NewHashTable(keys)
+	ht = NewHashTable(keys)
 	for k := range key {
 		for i := uint(0); i < 8; i++ {
 			key[k] = 1 << i
@@ -438,7 +478,7 @@ func TestI(file string, hf2 string) Stats {
 			key[k] = 0
 		}
 	}
-	return ht.Stats
+	return
 }
 
 // [ABCDEFGH][EFGHIJKL][IJKLMNOP][MNOPQRST][QRSTUVWX][UVWXYZ01]
@@ -487,10 +527,11 @@ func genWords(perms []string, f func(word string)) {
 }
 
 func runTestsWithFileAndHashes(file string, hf []string) {
-	var s Stats
-	var print = func(s Stats) {
-		fmt.Printf("lines=%d, inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
-			s.Lines, s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
+	var s *HashTable
+	var print = func(s *HashTable) {
+		q := s.HashQuality()
+		fmt.Printf("lines=%d, inserts=%d, size=%d, cols=%d, probes=%d, heads=%d, buckets=%d, entries=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, q=%0.2f\n",
+			s.Lines, s.Inserts, s.Size, s.Cols, s.Probes, s.Heads, s.Nbuckets, s.Entries, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, q)
 	}
 	fmt.Printf("file=%q\n", file)
 	for {
@@ -572,6 +613,7 @@ var extra = flag.Int("e", 1, "extra bis in table size")
 var prime = flag.Bool("p", false, "table size is primes and use mod")
 var all = flag.Bool("a", false, "run all tests")
 var pd = flag.Bool("pd", false, "print duplicate hashes")
+var oa = flag.Bool("oa", false, "open addressing (no buckets)")
 var A = flag.Bool("A", false, "test A")
 var B = flag.Bool("B", false, "test B")
 var C = flag.Bool("C", false, "test C")
@@ -626,5 +668,13 @@ func main() {
 			hf2 = *hf
 			runTestsWithFileAndHashes(v, []string{*hf})
 		}
+	}
+}
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "%s: [flags] [dictionary-files]\n", os.Args[0])
+    	flag.PrintDefaults()
 	}
 }
