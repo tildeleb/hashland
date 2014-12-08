@@ -1,14 +1,55 @@
-hashland
+HashLand
 ========
-
-Go versions of murmur, cityhash, siphash, jenkins, spooky and more.
-Code to evaluate the quality of each hash function.
 
 **Trust no code or hash functions here yet**
 
 **Work in progress, more hashes to come soon**
 
 **Some licensing information missing; will be rectified soon**
+
+HashLand provides pure Go versions of murmur, cityhash, jenkins, spooky, sbox, crapwow, siphash, keccak, skein and more.
+
+The "hash land" application evaluates the quality of each hash function with real world testing.
+
+Introduction
+------------
+As part of another project I decided to write some hash functions in Go and test them out. There are no "bad" hash functions here. Must of these do a very good job of hashing keys with good distribution. However, my tests and dictionaries are still very basic. I've been focused on getting the hash functions written.
+
+Don't use the non crypto hash functions if you have uncontrolled input or an adversary. If you do use at least SipHash.
+
+Next Steps
+----------
+1. A few more hash functions
+2. Make sure licensing and author information is accurate
+3. Performance optimization
+4. Better tests
+5. Better dictionaries
+6. Better stats
+
+Non Crypto Hash Functions
+-------------------------
+	"sbox":			simple hash function         
+	"CrapWow":		another simple hash function
+	"MaHash8v64":	russian hash function
+	"j332c":		Jenkins lookup3 c bits hash
+	"j332b":		Jenkins lookup3 b bits hash
+	"j232":			Jenkins lookup8 32 bit
+	"j264l": 		Jenkins lookup8 64 bit (low bits)
+	"j264h": 		Jenkins lookup8 64 bit (high bits)
+	"j264xor":		Jenkins lookup8 64 bit (high xor low bits)
+	"spooky32":		Jenkins Spooky 32 bit flavor
+
+Crypto Hash Functions
+---------------------
+	"siphashal": 
+	"siphashah": 
+	"siphashbl": 
+	"siphashbh": 
+	"skein256xor": 
+	"skein256low": 
+	"skein256hi": 
+	"sha1160": 
+	"keccak160l"
 
 Usage
 -----
