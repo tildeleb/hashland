@@ -4,11 +4,11 @@ hashland
 Go versions of murmur, cityhash, siphash, jenkins, spooky and more.
 Code to evaluate the quality of each hash function.
 
-** Trust no code or hash functions here yet **
+**Trust no code or hash functions here yet**
 
-** Work in progress, more hashes to come soon **
+**Work in progress, more hashes to come soon**
 
-** Some licensing information missing; will be rectified soon **
+**Some licensing information missing; will be rectified soon**
 
 	leb@hula:~/gotest/src/github.com/tildeleb/hashland % ./hashland -A -hf="all" -oa db/dic_common_words.txt
 	file="db/dic_common_words.txt"
