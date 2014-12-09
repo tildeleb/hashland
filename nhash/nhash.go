@@ -1,12 +1,18 @@
 // Copyright © 2014 Lawrence E. Bakst. All rights reserved.
 
+// This package contains a new set of interfacs for hash functions.
+// It also implements the Go streaming hash interface as HashStream.
+// It is an experiment.
+
 package nhash
 
 import (
 	"io"
 )
 
-// Minimum information for a hash function
+// Interface HashFunction requires 4 methods that return the
+// size of the hasg function in bytes and bits. Probably wiil
+// flush bits. Also the maximum number of bytes of seed needed.
 type HashFunction interface {
 	// Size returns the number of bytes Sum will return.
 	Size() int
@@ -75,5 +81,6 @@ type HashGeneric interface {
 	HashFunction
 
 	// Hash takes "in" bytes of input, the hash is returned into byte slice "out"
+	// change seeds to bytes ???
 	Hash(in []byte, out []byte, seeds ...uint64) []byte
 }
