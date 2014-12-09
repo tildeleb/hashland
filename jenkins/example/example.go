@@ -1,3 +1,4 @@
+// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
 package main 
 
 import "flag"

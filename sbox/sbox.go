@@ -1,3 +1,5 @@
+// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
+
 package sbox
 
 import "github.com/tildeleb/hashland/nhash"
