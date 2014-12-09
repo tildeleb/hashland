@@ -11,6 +11,7 @@ import (
 	"io"
 	"bufio"
 	"hash"
+	"hash/adler32"
 	"github.com/tildeleb/hashland/nhash"
 	"sort"
 	"time"
@@ -28,11 +29,12 @@ import (
 	"github.com/tildeleb/hrff"
 )
 
+var a32 hash.Hash32
 var k160 hash.Hash
 var skein256 hash.Hash
 var sha1160 hash.Hash
-var hashFunctions = []string{"sbox", "CrapWow", "MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
-	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l",
+var hashFunctions = []string{"adler32", "sbox", "CrapWow", "MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
+	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l", 
 }
 
 var hf2 string
@@ -66,13 +68,19 @@ func hashf(k []byte) uint32 {
 	var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	var fp = make([]byte, 32)
 	switch hf2 {
+	case "adler32":
+		a32.Reset()
+		a32.Write(k)
+		h := a32.Sum32()
+		//fmt.Printf("a32 hash=0x%08x\n", h)
+		return h
 	case "sbox":
-		hash := sbox.Sbox(k, 0)
-		return hash
+		h := sbox.Sbox(k, 0)
+		return h
 	case "CrapWow":
-		hash := crapwow.CrapWow(k, 0)
+		h := crapwow.CrapWow(k, 0)
 		//fmt.Printf("key=%q, hash=0x%08x\n", string(k), hash)
-		return hash
+		return h
 	case "MaHash8v64":
 		h64 := mahash.MaHash8v64(k)
 		return uint32(h64)
@@ -83,17 +91,17 @@ func hashf(k []byte) uint32 {
 		_, b := jenkins.Jenkins364(k, len(k), 0, 0)
 		return b
 	case "j232":
-		hash := jenkins.Hash232(k, 0)
-		return hash
+		h := jenkins.Hash232(k, 0)
+		return h
 	case "j264l":
-		hash := jenkins.Hash264(k, 0)
-		return uint32(hash&0xFFFFFFFF)
+		h := jenkins.Hash264(k, 0)
+		return uint32(h&0xFFFFFFFF)
 	case "j264h":
-		hash := jenkins.Hash264(k, 0)
-		return uint32((hash>>32)&0xFFFFFFFF)
+		h := jenkins.Hash264(k, 0)
+		return uint32((h>>32)&0xFFFFFFFF)
 	case "j264xor":
-		hash := jenkins.Hash264(k, 0)
-		return uint32(hash&0xFFFFFFFF) ^ uint32((hash>>32)&0xFFFFFFFF)
+		h := jenkins.Hash264(k, 0)
+		return uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF)
 	case "spooky32":
 		return spooky.Hash32(k, 0)
 	case "siphashal":
@@ -843,6 +851,7 @@ func main() {
 	skein256 = skein.New256()
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()
+	a32 = adler32.New()
 	switch {
 	case *file != "":
 		if *hf == "all" {
