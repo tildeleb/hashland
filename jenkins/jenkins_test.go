@@ -8,7 +8,7 @@ import "unsafe"
 //import "math"
 //import "math/rand"
 //import "runtime"
-import "github.com/tildeleb/hashes/jenkins"
+import "github.com/tildeleb/hashland/jenkins"
 import "github.com/tildeleb/hrff"
 import "testing"
 

@@ -1,6 +1,9 @@
 package crapwow
 
-import "unsafe"
+import (
+	"unsafe"
+	"github.com/tildeleb/hashland/nhash"
+)
 
 // this makes a new slice of uint32 that points to the same slice passed in as []byte
 // we should check alignment for architectures that don't handle unaligned reads
@@ -64,3 +67,43 @@ func CrapWow(key []byte, seed uint32) uint32 {
     cwmixb(h ^ (k + n))
     return k ^ h
 }
+
+type State struct {
+	hash	uint32
+	seed	uint32
+}
+
+// New returns a new hash.HashF32 interface that computes a 32 bit CrapWow hash.
+func New(seed uint32) nhash.HashF32 {
+	s := new(State)
+	s.seed = seed
+	return s
+}
+
+// The size of an jenkins3 32 bit hash in bytes.
+const Size = 4
+
+// Return the size of the resulting hash.
+func (s *State) Size() int { return Size }
+
+// Return the blocksize of the hash which in this case is 8 bytes.
+func (s *State) BlockSize() int { return 8 }
+
+// Return the maximum number of seed bypes required.
+func (s *State) NumSeedBytes() int {
+	return 4
+}
+
+// retunrs the number of bits the hash function outputs
+func (s *State) HashSizeInBits() int {
+	return 32
+}
+
+func (s *State) Hash32(b []byte, seeds ...uint32) uint32 {
+	if len(seeds) > 0 {
+		s.seed = seeds[0]
+	}
+	s.hash = CrapWow(b, s.seed)
+	return s.hash
+}
+

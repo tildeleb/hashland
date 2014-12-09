@@ -1,5 +1,7 @@
 package sbox
 
+import "github.com/tildeleb/hashland/nhash"
+
 var SBoxTable = [256]uint32{
 	0x4660c395, 0x3baba6c5, 0x27ec605b, 0xdfc1d81a, 0xaaac4406, 0x3783e9b8, 0xa4e87c68, 0x62dc1b2a,
 	0xa8830d34, 0x10a56307, 0x4ba469e3, 0x54836450, 0x1b0223d4, 0x23312e32, 0xc04e13fe, 0x3b3d61fa,
@@ -48,3 +50,43 @@ func Sbox(key []byte, seed uint32) uint32 {
 	h += ( h >> 22 ) ^ ( h << 4 )
 	return h
 }
+
+type State struct {
+	hash	uint32
+	seed	uint32
+}
+
+// New returns a new hash.HashF32 interface that computes a 32 bit CrapWow hash.
+func New(seed uint32) nhash.HashF32 {
+	s := new(State)
+	s.seed = seed
+	return s
+}
+
+// The size of an jenkins3 32 bit hash in bytes.
+const Size = 4
+
+// Return the size of the resulting hash.
+func (s *State) Size() int { return Size }
+
+// Return the blocksize of the hash which in this case is 8 bytes.
+func (s *State) BlockSize() int { return 2 }
+
+// Return the maximum number of seed bypes required.
+func (s *State) NumSeedBytes() int {
+	return 4
+}
+
+// retunrs the number of bits the hash function outputs
+func (s *State) HashSizeInBits() int {
+	return 32
+}
+
+func (s *State) Hash32(b []byte, seeds ...uint32) uint32 {
+	if len(seeds) > 0 {
+		s.seed = seeds[0]
+	}
+	s.hash = Sbox(b, s.seed)
+	return s.hash
+}
+

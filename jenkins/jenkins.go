@@ -9,26 +9,16 @@ import (
 	"fmt"
 	"hash"
 	"unsafe"
+	"github.com/tildeleb/hashland/nhash"
 )
-
-type Digest struct {
-	hash	uint32
-	seed	uint32
-	pc		uint32
-	pb		uint32
-	clen	int
-	tail	[]byte
-}
-
-// The size of an jenkins3 32 bit hash in bytes.
-const Size = 4
 
 // Make sure interfaces are correctly implemented. Stolen from another implementation.
 // I did something similar in another package to verify the interface but didn't know you could elide the variable in a var.
 // What a cute wart it is.
 var (
 	//_ hash.Hash   = new(Digest)
-	_ hash.Hash32 = new(Digest)
+	_ hash.Hash32 = new(State332c)
+	_  nhash.HashF32 = new(State332c)
 )
 
 /*
@@ -745,6 +735,50 @@ func HashBytesLength(k []byte, length int, seed uint32) uint32 {
 	return ret
 }
 
+//
+// Streaming interface and new interface
+
+type State332 struct {
+	hash	uint32
+	seed	uint32
+	pc		uint32
+	pb		uint32
+	clen	int
+	tail	[]byte
+}
+
+type State332c struct {
+	State332
+}
+
+type State332b struct {
+	State332
+}
+
+type State364 struct {
+	hash	uint64
+	seed	uint64
+	pc		uint32
+	pb		uint32
+	clen	int
+	tail	[]byte
+}
+
+type State264 struct {
+	hash	uint64
+	seed	uint64
+}
+
+type State232 struct {
+	hash	uint32
+	seed	uint32
+	clen	int
+	tail	[]byte
+}
+
+
+// const Size = 4
+
 // Sum32 returns the 32 bit hash of data given the seed.
 // This is code is what I started with before I added the hash.Hash and hash.Hash32 interfaces.
 func Sum32(data []byte, seed uint32) uint32 {
@@ -752,29 +786,57 @@ func Sum32(data []byte, seed uint32) uint32 {
 	return rpc
 }
 
-// New returns a new hash.Hash32 interface that computes the a 32 bit murmur3 hash.
+// New returns a new hash.Hash32 interface that computes a 32 bit jenkins lookup3 hash.
 func New(seed uint32) hash.Hash32 {
-	d := new(Digest)
-	d.seed = seed
-	d.Reset()
-	return d
+	s := new(State332c)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+
+// New returns a new nhash.HashF32 interface that computes a 32 bit jenkins lookup3 hash.
+func New332c(seed uint32) nhash.HashF32 {
+	s := new(State332c)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+
+/*
+func New332b(seed uint32) nhash.HashF32 {
+	s := new(State332b)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+*/
+
+// Return the size of the resulting hash.
+func (d *State332c) Size() int { return 4 }
+
+// Return the blocksize of the hash which in this case is 1 byte.
+func (d *State332c) BlockSize() int { return 1 }
+
+// Return the maximum number of seed bypes required. In this case 2 x 32
+func (d *State332c) NumSeedBytes() int {
+	return 8
+}
+
+// Return the number of bits the hash function outputs.
+func (d *State332c) HashSizeInBits() int {
+	return 32
 }
 
 // Reset the hash state.
-func (d *Digest) Reset() {
-	d.hash = d.seed
+func (d *State332c) Reset() {
+	d.pc = d.seed
+	d.pb = d.seed
 	d.clen = 0
 	d.tail = nil
 }
 
-// Return the size of the resulting hash.
-func (d *Digest) Size() int { return Size }
-
-// Return the blocksize of the hash which in this case is 1 byte.
-func (d *Digest) BlockSize() int { return 1 }
-
 // Accept a byte stream p used for calculating the hash. For now this call is lazy and the actual hash calculations take place in Sum() and Sum32().
-func (d *Digest) Write(p []byte) (nn int, err error) {
+func (d *State332c) Write(p []byte) (nn int, err error) {
 	l := len(p)
 	d.clen += l
 	d.tail = append(d.tail, p...)
@@ -782,19 +844,176 @@ func (d *Digest) Write(p []byte) (nn int, err error) {
 }
 
 // Return the current hash as a byte slice.
-func (d *Digest) Sum(b []byte) []byte {
+func (d *State332c) Sum(b []byte) []byte {
 	d.pc, d.pb = Jenkins364(d.tail, len(d.tail), d.pc, d.pb)
 	d.hash = d.pc
-	h := d.pc
+	h := d.hash
 	return append(b, byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
 }
 
 // Return the current hash as a 32 bit unsigned type.
-func (d *Digest) Sum32() uint32 {
+func (d *State332c) Sum32() uint32 {
 	d.pc, d.pb = Jenkins364(d.tail, len(d.tail), d.pc, d.pb)
 	d.hash = d.pc
 	return d.hash
 }
+
+// Given b as input and an optional 32 bit seed return the Jenkins lookup3 hash c bits.
+func (d *State332c) Hash32(b []byte, seeds ...uint32) uint32 {
+	//fmt.Printf("len(b)=%d, b=%x\n", len(b), b)
+	switch len(seeds) {
+	case 2:
+		d.pb = seeds[1]
+		fallthrough
+	case 1:
+		d.pc = seeds[0]
+	default:
+		d.pc, d.pb = 0, 0
+	}
+
+	//d.pc, d.pb = 0, 0
+
+	d.pc, d.pb = Jenkins364(b, len(b), d.pc, d.pb)
+	d.hash = d.pc
+	return d.hash
+}
+
+// ----
+
+func New364(seed uint64) nhash.HashF64 {
+	s := new(State364)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+
+// Return the size of the resulting hash.
+func (d *State364) Size() int { return 8 }
+
+// Return the blocksize of the hash which in this case is 1 byte.
+func (d *State364) BlockSize() int { return 1 }
+
+// Return the maximum number of seed bypes required. In this case 2 x 32
+func (d *State364) NumSeedBytes() int {
+	return 8
+}
+
+// Return the number of bits the hash function outputs.
+func (d *State364) HashSizeInBits() int {
+	return 64
+}
+
+// Reset the hash state.
+func (d *State364) Reset() {
+	d.pc = uint32(d.seed)
+	d.pb = uint32(d.seed>>32)
+	d.clen = 0
+	d.tail = nil
+}
+
+// Accept a byte stream p used for calculating the hash. For now this call is lazy and the actual hash calculations take place in Sum() and Sum32().
+func (d *State364) Write(p []byte) (nn int, err error) {
+	l := len(p)
+	d.clen += l
+	d.tail = append(d.tail, p...)
+	return l, nil
+}
+
+// Return the current hash as a byte slice.
+func (d *State364) Sum(b []byte) []byte {
+	d.pc, d.pb = Jenkins364(d.tail, len(d.tail), d.pc, d.pb)
+	d.hash = uint64(d.pb<<32) | uint64(d.pc)
+	h := d.hash
+	return append(b, byte(h>>56), byte(h>>48), byte(h>>40), byte(h>>32), byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
+}
+
+// Return the current hash as a 64 bit unsigned type.
+func (d *State364) Sum64() uint64 {
+	d.pc, d.pb = Jenkins364(d.tail, len(d.tail), d.pc, d.pb)
+	d.hash = uint64(d.pb<<32) | uint64(d.pc)
+	return d.hash
+}
+
+func (d *State364) Hash64(b []byte, seeds ...uint64) uint64 {
+	switch len(seeds) {
+	case 2:
+		d.pc = uint32(seeds[0])
+		d.pb = uint32(seeds[1])
+	case 1:
+		d.pc = uint32(seeds[0])
+		d.pb = uint32(seeds[0]>>32)
+	}
+	d.pc, d.pb = Jenkins364(b, len(b), d.pc, d.pb)
+
+	// pc is better mixed than pb so pc goes in the low order bits
+	d.hash = uint64(d.pb<<32) | uint64(d.pc)
+	return d.hash
+}
+
+// ----
+
+// New returns a new nhash.HashF32 interface that computes a 32 bit jenkins lookup3 hash.
+func New232(seed uint32) nhash.HashF32 {
+	s := new(State232)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+
+// Return the size of the resulting hash.
+func (s *State232) Size() int { return 4 }
+
+// Return the blocksize of the hash which in this case is 12 bytes at a time.
+func (s *State232) BlockSize() int { return 12 }
+
+// Return the maximum number of seed bypes required.
+func (s *State232) NumSeedBytes() int {
+	return 4
+}
+
+// Return the number of bits the hash function outputs.
+func (s *State232) HashSizeInBits() int {
+	return 32
+}
+
+// Reset the hash state.
+func (s *State232) Reset() {
+	s.seed = 0
+	s.clen = 0
+	s.tail = nil
+}
+
+// Accept a byte stream p used for calculating the hash. For now this call is lazy and the actual hash calculations take place in Sum() and Sum32().
+func (s *State232) Write(p []byte) (nn int, err error) {
+	l := len(p)
+	s.clen += l
+	s.tail = append(s.tail, p...)
+	return l, nil
+}
+
+// Return the current hash as a byte slice.
+func (s *State232) Sum(b []byte) []byte {
+	s.hash = Hash232(s.tail, s.seed)
+	h := s.hash
+	return append(b, byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
+}
+
+// Return the current hash as a 64 bit unsigned type.
+func (s *State232) Sum32() uint32 {
+	s.hash = Hash232(s.tail, s.seed)
+	return s.hash
+}
+
+func (s *State232) Hash32(b []byte, seeds ...uint32) uint32 {
+//	fmt.Printf("Hash32: len(b)=%d, b=%x\n", len(b), b)
+	if len(seeds) > 0 {
+		s.seed = 0
+	}
+	s.hash = Hash232(b, s.seed)
+	return s.hash
+}
+
+
 
 /*
 	var mix = func() {

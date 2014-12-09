@@ -70,6 +70,7 @@ Usage
 	  -G=false: test G
 	  -H=false: test H
 	  -I=false: test I
+	  -J=false: test J
 	  -a=false: run all tests
 	  -e=1: extra bis in table size
 	  -file="": words to read

@@ -11,6 +11,9 @@ import (
 	"io"
 	"bufio"
 	"hash"
+	"github.com/tildeleb/hashland/nhash"
+	"sort"
+	"time"
 	"crypto/sha1"
 	"github.com/tildeleb/hashland/sbox"
 	"github.com/tildeleb/hashland/crapwow"
@@ -22,7 +25,7 @@ import (
 	"github.com/tildeleb/hashland/skein"
 	//"github.com/tildeleb/hashland/threefish"
 	"github.com/tildeleb/cuckoo/primes"
-	_ "github.com/tildeleb/hrff"
+	"github.com/tildeleb/hrff"
 )
 
 var k160 hash.Hash
@@ -30,7 +33,8 @@ var skein256 hash.Hash
 var sha1160 hash.Hash
 var hashFunctions = []string{"sbox", "CrapWow", "MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
 	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l",
-	}
+}
+
 var hf2 string
 
 type Bucket struct {
@@ -182,27 +186,33 @@ func NewHashTable(lines int) *HashTable {
 	return ht
 }
 
-func (ht *HashTable) Add(k []byte) {
+func (ht *HashTable) Add(ka []byte) {
+	k := make([]byte, len(ka), len(ka))
+	k = k[:]
+	amt := copy(k, ka)
+	if amt != len(ka) {
+		panic("Add")
+	}
 	ht.Inserts++
 	idx := uint32(0)
-	hash := hashf(k) // jenkins.Hash232(k, 0)
+	h := hashf(k) // jenkins.Hash232(k, 0)
 	if *prime {
-		idx = hash % ht.Size
+		idx = h % ht.Size
 	} else {
-		idx = hash & ht.SizeMask
+		idx = h & ht.SizeMask
 	}
 	//fmt.Printf("index=%d\n", idx)
 	cnt := 0
 	pass := 0
 
-	//fmt.Printf("Add: %s\n", k)
+	//fmt.Printf("Add: %x\n", k)
 	//ht.Buckets[idx].Key = k
 	//len(ht.Buckets[idx].Key) == 0
 	for {
 		if ht.Buckets[idx] == nil {
 			// no entry or chain at this location, make it
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
-			//fmt.Printf("Add: len=%d, %s\n", len(ht.Buckets[idx]), ht.Buckets[idx][0].Key)
+			//fmt.Printf("Add: idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
 			ht.Probes++
 			ht.Heads++
 			return
@@ -215,11 +225,11 @@ func (ht *HashTable) Add(k []byte) {
 			}
 
 			// check for a duplicate key
-			h := hashf(ht.Buckets[idx][0].Key)
-			if h == hash {
+			bh := hashf(ht.Buckets[idx][0].Key)
+			if bh == h {
 				if *pd {
-					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", hash, idx, k)
-					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, ht.Buckets[idx][0].Key)
+					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
+					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", bh, idx, ht.Buckets[idx][0].Key)
 				}
 				ht.Dups++
 			}
@@ -235,11 +245,12 @@ func (ht *HashTable) Add(k []byte) {
 		} else {
 			// first scan slice for dups
 			for j := range ht.Buckets[idx] {
-				h := hashf(ht.Buckets[idx][j].Key)
-				if h == hash {
+				bh := hashf(ht.Buckets[idx][j].Key)
+				//fmt.Printf("idx=%d, j=%d, h=0x%08x, hash=0x%08x, key=%q", idx, j, bh, h, ht.Buckets[idx][j].Key)
+				if bh == h {
 					if *pd {
-						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", hash, idx, k)
-						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, ht.Buckets[idx][0].Key)
+						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
+						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", bh, idx, ht.Buckets[idx][0].Key)
 					}
 					ht.Dups++
 				}
@@ -473,6 +484,19 @@ func TestH(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestI(file string, hf2 string) (ht *HashTable) {
+	//fmt.Printf("n=%d\n", *n)
+	fmt.Printf("\t%20q: ", hf2)
+	bs := make([]byte, 4, 4)
+	ht = NewHashTable(*n)
+	for i := 0; i < *n; i++ {
+		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+		ht.Add(bs)
+		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+	}
+	return
+}
+
+func TestJ(file string, hf2 string) (ht *HashTable) {
 	length := 900
 	keys := length * 8
 	key := make([]byte, length, length)
@@ -535,6 +559,137 @@ func genWords(perms []string, f func(word string)) {
 	}
 }
 
+func tdiff(begin, end time.Time) time.Duration {
+    d := end.Sub(begin)
+    return d
+}
+
+func benchmark32s(n int) {
+	//var hashes = make(Uint32Slice, n)
+	//var u = make([]uint32, 1, 1)
+	bs := make([]byte, 4, 4)
+	var pn = hrff.Int64{int64(n), ""}
+	var ps = hrff.Int64{int64(n*4), "B"}
+	fmt.Printf("benchmark32s: gen n=%d, n=%h, size=%h\n", n, pn, ps)
+	start := time.Now()
+	for i := 0; i < n; i++ {
+		bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
+		_ = jenkins.Hash232(bs, 0)
+		//hashes[i] = h
+		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+	}
+	stop := time.Now()
+	d := tdiff(start, stop)
+	hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
+	bsec := hrff.Float64{(float64(n) * 4 / d.Seconds()), "B/sec"}
+	fmt.Printf("benchmark32s: %h\n", hsec)
+	fmt.Printf("benchmark32s: %h\n", bsec)
+	return
+
+	fmt.Printf("benchmark32s: sort n=%d\n", n)
+	//hashes.Sort()
+/*
+	for i := 0; i < n; i++ {
+		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+	}
+*/
+	fmt.Printf("benchmark32s: dup check n=%d\n", n)
+	//dups, mrun := checkForDups32(hashes)
+	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
+}
+
+// IntSlice attaches the methods of Interface to []int, sorting in increasing order.
+type Uint32Slice []uint32
+
+func (p Uint32Slice) Len() int           { return len(p) }
+func (p Uint32Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p Uint32Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// Sort is a convenience method.
+func (p Uint32Slice) Sort() { sort.Sort(p) }
+
+func checkForDups32(u Uint32Slice) (dups, mrun int) {
+	i := 0
+	run := 0
+	for k, v := range u {
+		if k == 0 || i == k {
+			continue
+		}
+		if u[i] == v {
+			run++
+			dups++
+			continue
+		} else {
+			if run > mrun {
+				mrun = run
+			}
+			run = 0
+			i = k
+		}
+	}
+	return
+}
+
+func benchmark32g(h nhash.HashF32, n int) {
+	var hashes = make(Uint32Slice, n)
+	//var u = make([]uint32, 1, 1)
+	bs := make([]byte, 4, 4)
+	var pn = hrff.Int64{int64(n), ""}
+	var ps = hrff.Int64{int64(n*4), "B"}
+	fmt.Printf("benchmark32g: gen n=%d, n=%h, size=%h\n", n, pn, ps)
+	start := time.Now()
+	for i := 0; i < n; i++ {
+		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+		hashes[i] = h.Hash32(bs)
+		//hashes[i] = h
+		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+	}
+	stop := time.Now()
+	d := tdiff(start, stop)
+	hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
+	bsec := hrff.Float64{(float64(n) * 4 / d.Seconds()), "B/sec"}
+	fmt.Printf("benchmark32g: %h\n", hsec)
+	fmt.Printf("benchmark32g: %h\n", bsec)
+	//return
+
+	fmt.Printf("benchmark32g: sort n=%d\n", n)
+	hashes.Sort()
+/*
+	for i := 0; i < n; i++ {
+		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+	}
+*/
+	fmt.Printf("benchmark32g: dup check n=%d\n", n)
+	dups, mrun := checkForDups32(hashes)
+	fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
+}
+
+func halloc(hfs string) (hf32 nhash.HashF32) {
+	switch hfs {
+	case "sbox":
+		hf32 = sbox.New(0)
+	case "CrapWow":
+		hf32 = crapwow.New(0)
+	case "j332c":
+		hf32 = jenkins.New332c(0)
+	case "j232":
+		hf32 = jenkins.New232(0)
+	}
+	return
+}
+
+var benchmarks = []string{"j332c", "j232", "sbox", "CrapWow"}
+//var benchmarks = []string{"j332c"}
+
+func benchmark(hashes []string, n int) {
+	for _, v := range hashes {
+		hf32 := halloc(v)
+		fmt.Printf("benchmark32g: %q\n", v)
+		benchmark32g(hf32, n)
+		fmt.Printf("\n")
+	}
+}
+
 func runTestsWithFileAndHashes(file string, hf []string) {
 	var s *HashTable
 	var print = func(s *HashTable) {
@@ -556,6 +711,10 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 	fmt.Printf("file=%q\n", file)
 	for {
 		switch {
+		case *b:
+			benchmark32s(*n)
+			benchmark(benchmarks, *n)
+			*b = false
 		case *A:
 			fmt.Printf("TestA (simple hash check)\n")
 			for _, hf2 = range hf {
@@ -614,12 +773,19 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 			}
 			*H = false
 		case *I:
-			fmt.Printf("TestI (one bit keys)\n")
+			fmt.Printf("TestI (integers from 0 to n-1)\n")
 			for _, hf2 = range hf {
 				s = TestI(file, hf2)
 				print(s)
 			}
 			*I = false
+		case *J:
+			fmt.Printf("TestI (one bit keys)\n")
+			for _, hf2 = range hf {
+				s = TestI(file, hf2)
+				print(s)
+			}
+			*J = false
 		default:
 			return
 		}
@@ -634,6 +800,8 @@ var prime = flag.Bool("p", false, "table size is primes and use mod")
 var all = flag.Bool("a", false, "run all tests")
 var pd = flag.Bool("pd", false, "print duplicate hashes")
 var oa = flag.Bool("oa", false, "open addressing (no buckets)")
+var n = flag.Int("n", 100000000, "number of hashes for benchmark")
+var b = flag.Bool("b", false, "run benchmarks")
 var A = flag.Bool("A", false, "test A")
 var B = flag.Bool("B", false, "test B")
 var C = flag.Bool("C", false, "test C")
@@ -643,6 +811,7 @@ var F = flag.Bool("F", false, "test F")
 var G = flag.Bool("G", false, "test G")
 var H = flag.Bool("H", false, "test H")
 var I = flag.Bool("I", false, "test I")
+var J = flag.Bool("J", false, "test J")
 
 func main() {
 /*
@@ -660,6 +829,7 @@ func main() {
 */
 	flag.Parse()
 	if *all {
+		*b = true
 		*A, *B, *C, *D, *E, *F, *G, *H , *I = true, true, true, true, true, true, true, true, true
 	}
 	//fmt.Printf("%d lines read\n", lines)
@@ -673,21 +843,27 @@ func main() {
 	skein256 = skein.New256()
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()
-	if *file != "" {
+	switch {
+	case *file != "":
 		if *hf == "all" {
 			runTestsWithFileAndHashes(*file, hashFunctions)
 		} else {
 			hf2 = *hf
 			runTestsWithFileAndHashes(*file, []string{*hf})
 		}
-	}
-	for _, v := range flag.Args() {
-		if *hf == "all" {
-			runTestsWithFileAndHashes(v, hashFunctions)
-		} else {
-			hf2 = *hf
-			runTestsWithFileAndHashes(v, []string{*hf})
+	case len(flag.Args()) != 0:
+		for _, v := range flag.Args() {
+			if *hf == "all" {
+				runTestsWithFileAndHashes(v, hashFunctions)
+			} else {
+				hf2 = *hf
+				runTestsWithFileAndHashes(v, []string{*hf})
+			}
 		}
+	case *b:
+		benchmark32s(*n)
+		fmt.Printf("\n")
+		benchmark(benchmarks, *n)
 	}
 }
 
