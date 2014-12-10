@@ -61,15 +61,68 @@ type HashTable struct {
 	Stats
 }
 
-// "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
-// "adler32" removed for the same reasons
-var hashFunctions = []string{"j264", "siphasha", "siphashb", "MaHash8v64", /*"spooky64", "spooky128h", "spooky128l", "spooky128xor",*/ "sbox", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
-	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l", 
+type HashFunction struct {
+	Name		string
+	Size		int // in bits
+	Crypto		bool
+	desc		string
 }
 
+
+var HashFunctions = map[string]HashFunction{
+	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits"},
+	"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits"},
+	"siphash128b":		HashFunction{"siphashb", 		64,		true,	"siphash, 128 bit, b bits"},
+	"siphash64al":		HashFunction{"siphash64al", 	32,		true,	"siphash, 64 bit, a bits, low"},
+	"siphash64ah":		HashFunction{"siphash64ah", 	32,		true,	"siphash, 64 bit, a bits, high"},
+	"siphash64bl":		HashFunction{"siphash64bl", 	32,		true,	"siphash, 128 bit, b bits, low"},
+	"siphash64bh":		HashFunction{"siphash64bh", 	32,		true,	"siphash, 128 bit, b bits, high"},
+
+	"MaHash8v64":		HashFunction{"MaHash8v64", 		64,		false,	"russian hash function"},
+
+	// tribute to Robert Jenkins goes here
+	"spooky32":			HashFunction{"spooky32", 		32,		false,	"jenkins, spooky, 32 bit"},
+	"spooky64":			HashFunction{"spooky64", 		64,		false,	"jenkins, spooky, 64 bit"},
+	"spooky128h":		HashFunction{"spooky128h", 		64,		false,	"jenkins, spooky, 128 bit, high bits"},
+	"spooky128l":		HashFunction{"spooky128l", 		64,		false,	"jenkins, spooky, 128 bit, low bits"},
+	"spooky128xor":		HashFunction{"spooky128xor",	64,		false,	"jenkins, spooky, 128, high xor low bits"},
+	"j264":				HashFunction{"j264", 			64,		false,	"jenkins, lookup8. 64 bit"},
+	"j332c":			HashFunction{"j332c", 			32,		false,	"jenkins, lookup3, 32 bit, c bits"},
+	"j332b":			HashFunction{"j332b", 			32,		false,	"jenkins, lookup3, 32 bit, b bits"},
+	"j232":				HashFunction{"j232", 			32,		false,	"jenkins, lookup8, 32 bit"},
+	"j264l":			HashFunction{"j264l", 			32,		false,	"jenkins, lookup8, 64 bit, low bits"},
+	"j264h":			HashFunction{"j264h", 			32,		false,	"jenkins, lookup8, 64 bit, high bits"},
+	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits"},
+
+	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox"},
+	"skein256low":		HashFunction{"skein256low", 	32,		true,	"skein256low"},
+	"skein256hi":		HashFunction{"skein256hi", 		32,		true,	"skein256hi"},
+	"skein256xor":		HashFunction{"skein256xor", 	32,		true,	"skein256xor"},
+	"sha1":				HashFunction{"sha1", 			32,		true,	"sha1"},
+	"keccak160l":		HashFunction{"keccak160l", 		32,		true,	"keccak160l"},
+
+	"CrapWow":			HashFunction{"CrapWow", 		32,		false,	"CrapWow"},
+	"adler32":			HashFunction{"adler32", 		32,		false,	"adler32"},
+}
+
+// "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
+// "adler32" removed for the same reasons
+var hashFunctions = []string{"j264", "siphash128a", "siphash128b", "MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor", "sbox",
+	"j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",
+	"siphash64al", "siphash64ah", "siphash64bl", "siphash64bh",
+	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
+}
+
+// crappy generic adapter that just slows us down
+// will be removed
 func hashf(k []byte) uint64 {
 	var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	var fp = make([]byte, 32)
+	_, ok := HashFunctions[hf2]
+	if !ok {
+		fmt.Printf("%q not found\n", hf2)
+		panic("hashf")
+	}
 	switch hf2 {
 	case "adler32":
 		a32.Reset()
@@ -110,7 +163,6 @@ func hashf(k []byte) uint64 {
 		return uint64(uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF))
 	case "spooky32":
 		return uint64(spooky.Hash32(k, 0))
-/*
 	case "spooky64":
 		return spooky.Hash64(k, 0)
 	case "spooky128h":
@@ -122,23 +174,25 @@ func hashf(k []byte) uint64 {
 	case "spooky128xor":
 		h, l := spooky.Hash128(k, 0)
 		return h ^ l
-*/
-	case "siphasha":
+	case "siphash64":
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return a
-	case "siphashb":
-		b, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+	case "siphash128a":
+		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+		return a
+	case "siphash128b":
+		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return b
-	case "siphashal":
+	case "siphash64al":
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return uint64(a&0xFFFFFFFF)
-	case "siphashah":
+	case "siphash64ah":
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return uint64((a>>32)&0xFFFFFFFF)
-	case "siphashbl":
+	case "siphash64bl":
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64(b&0xFFFFFFFF)
-	case "siphashbh":
+	case "siphash64bh":
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64((b>>32)&0xFFFFFFFF)
 	case "keccak160l":
@@ -185,7 +239,7 @@ func hashf(k []byte) uint64 {
 		fp := skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
     	return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
-	case "sha1160":
+	case "sha1":
 		sha1160.Reset()
 		sha1160.Write(k)
 		fp = fp[0:0]
@@ -755,6 +809,16 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 		if **test.flag {
 			fmt.Printf("%s - %s\n", test.name, test.desc)
 			for _, hf2 = range hf {
+				hi := HashFunctions[hf2]
+				if *c && !hi.Crypto {
+					continue
+				}
+				if *h32 && hi.Size != 32 {
+					continue
+				}
+				if *h64 && hi.Size != 64 {
+					continue
+				}
 				fmt.Printf("\t%20q: ", hf2)
 				ht := test.ptf(file, hf2)
 				print(ht)
@@ -774,6 +838,11 @@ var prime = flag.Bool("p", false, "table size is primes and use mod")
 var all = flag.Bool("a", false, "run all tests")
 var pd = flag.Bool("pd", false, "print duplicate hashes")
 var oa = flag.Bool("oa", false, "open addressing (no buckets)")
+
+var c = flag.Bool("c", false, "only test crypto hash functions")
+var h32 = flag.Bool("h32", false, "only test 32 bit has functions")
+var h64 = flag.Bool("h64", false, "only test 64 bit has functions")
+
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
 var ni = flag.Int("ni", 200000, "number of integer keys")
 var n = flag.Int("n", 100000000, "number of hashes for benchmark")
