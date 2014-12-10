@@ -248,27 +248,36 @@ func tdiff(begin, end time.Time) time.Duration {
     return d
 }
 
+var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
 func benchmark32s(n int) {
 	//var hashes = make(Uint32Slice, n)
-	//var u = make([]uint32, 1, 1)
-	bs := make([]byte, 4, 4)
-	var pn = hrff.Int64{int64(n), ""}
-	var ps = hrff.Int64{int64(n*4), "B"}
-	fmt.Printf("benchmark32s: gen n=%d, n=%h, size=%h\n", n, pn, ps)
-	start := time.Now()
-	for i := 0; i < n; i++ {
-		bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
-		//_ = jenkins.Hash232(bs, 0)
-		_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-		//hashes[i] = h
-		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+	const nbytes = 1024
+	bs := make([]byte, nbytes, nbytes)
+	bs = bs[:]
+	for _, ksiz := range keySizes {
+		if ksiz == 512 {
+			n = n / 10
+		}
+		bs = bs[:ksiz]
+		fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
+		pn := hrff.Int64{int64(n), ""}
+		ps := hrff.Int64{int64(n*ksiz), "B"}
+		fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
+		start := time.Now()
+		for i := 0; i < n; i++ {
+			bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
+			_ = jenkins.Hash232(bs, 0)
+			//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+			//hashes[i] = h
+			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+		}
+		stop := time.Now()
+		d := tdiff(start, stop)
+		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
+		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
+		fmt.Printf("benchmark32s: %h\n", hsec)
+		fmt.Printf("benchmark32s: %h\n\n", bsec)
 	}
-	stop := time.Now()
-	d := tdiff(start, stop)
-	hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
-	bsec := hrff.Float64{(float64(n) * 4 / d.Seconds()), "B/sec"}
-	fmt.Printf("benchmark32s: %h\n", hsec)
-	fmt.Printf("benchmark32s: %h\n", bsec)
 	return
 
 	fmt.Printf("benchmark32s: sort n=%d\n", n)
@@ -316,26 +325,37 @@ func checkForDups32(u Uint32Slice) (dups, mrun int) {
 }
 
 func benchmark32g(h nhash.HashF32, n int) {
-	var hashes = make(Uint32Slice, n)
-	//var u = make([]uint32, 1, 1)
-	bs := make([]byte, 4, 4)
-	var pn = hrff.Int64{int64(n), ""}
-	var ps = hrff.Int64{int64(n*4), "B"}
-	fmt.Printf("benchmark32g: gen n=%d, n=%h, size=%h\n", n, pn, ps)
-	start := time.Now()
-	for i := 0; i < n; i++ {
-		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-		hashes[i] = h.Hash32(bs)
-		//hashes[i] = h
-		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+	var hashes Uint32Slice
+	const nbytes = 1024
+
+	bs := make([]byte, nbytes, nbytes)
+	bs = bs[:]
+	for _, ksiz := range keySizes {
+		if ksiz == 512 {
+			n = n / 10
+		}
+		bs = bs[:ksiz]
+		hashes = make(Uint32Slice, n, n)
+		hashes = hashes[:]
+		fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
+		pn := hrff.Int64{int64(n), ""}
+		ps := hrff.Int64{int64(n*ksiz), "B"}
+		fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
+		start := time.Now()
+		for i := 0; i < n; i++ {
+			bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
+			//_ = jenkins.Hash232(bs, 0)
+			_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+			//hashes[i] = h
+			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+		}
+		stop := time.Now()
+		d := tdiff(start, stop)
+		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
+		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
+		fmt.Printf("benchmark32g: %h\n", hsec)
+		fmt.Printf("benchmark32g: %h\n\n", bsec)
 	}
-	stop := time.Now()
-	d := tdiff(start, stop)
-	hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
-	bsec := hrff.Float64{(float64(n) * 4 / d.Seconds()), "B/sec"}
-	fmt.Printf("benchmark32g: %h\n", hsec)
-	fmt.Printf("benchmark32g: %h\n", bsec)
-	//return
 
 	if *cd {
 		fmt.Printf("benchmark32g: sort n=%d\n", n)
