@@ -919,10 +919,9 @@ func main() {
 			}
 		}
 	case len(flag.Args()) == 0:
-		fmt.Printf("default\n")
 		// no files specified run the only two tests we can with the specified hash functions
 		allTestsOff()
-		*I, *J = true, true
+		*I, *J = true, false
 		if *hf == "all" {
 			runTestsWithFileAndHashes("", hashFunctions)
 		} else {
