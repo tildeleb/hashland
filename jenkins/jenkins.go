@@ -861,6 +861,7 @@ func (d *State332c) Sum32() uint32 {
 // Given b as input and an optional 32 bit seed return the Jenkins lookup3 hash c bits.
 func (d *State332c) Hash32(b []byte, seeds ...uint32) uint32 {
 	//fmt.Printf("len(b)=%d, b=%x\n", len(b), b)
+/*
 	switch len(seeds) {
 	case 2:
 		d.pb = seeds[1]
@@ -870,8 +871,8 @@ func (d *State332c) Hash32(b []byte, seeds ...uint32) uint32 {
 	default:
 		d.pc, d.pb = 0, 0
 	}
-
-	//d.pc, d.pb = 0, 0
+*/
+	d.pc, d.pb = 0, 0
 
 	d.pc, d.pb = Jenkins364(b, len(b), d.pc, d.pb)
 	d.hash = d.pc

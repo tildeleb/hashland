@@ -92,16 +92,17 @@ func Halloc(hfs string) (hf32 nhash.HashF32) {
 	return
 }
 
+var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 // crappy generic adapter that just slows us down
 // will be removed
 func Hashf(k []byte) uint64 {
-	var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-	var fp = make([]byte, 32)
+/*
 	_, ok := HashFunctions[Hf2]
 	if !ok {
 		fmt.Printf("%q not found\n", Hf2)
 		panic("hashf")
 	}
+*/
 	switch Hf2 {
 	case "adler32":
 		a32.Reset()
@@ -175,10 +176,11 @@ func Hashf(k []byte) uint64 {
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64((b>>32)&0xFFFFFFFF)
 	case "keccak160l":
+		fp := make([]byte, 32)
+		fp = fp[0:0]
 		k160.Reset()
 		k160.Write(k)
-		fp = fp[0:0]
-		fp := k160.Sum(fp)
+		fp = k160.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		if false {
 	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
@@ -190,10 +192,11 @@ func Hashf(k []byte) uint64 {
 			return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 		}
 	case "skein256xor":
+		fp := make([]byte, 32)
+		fp = fp[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = fp[0:0]
-		fp := skein256.Sum(fp)
+		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
 		if true {
 	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
@@ -205,24 +208,27 @@ func Hashf(k []byte) uint64 {
 	    	return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 	    }
 	case "skein256low":
+		fp := make([]byte, 32)
+		fp = fp[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = fp[0:0]
-		fp := skein256.Sum(fp)
+		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
     	return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 	case "skein256hi":
+		fp := make([]byte, 32)
+		fp = fp[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = fp[0:0]
-		fp := skein256.Sum(fp)
+		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
     	return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
 	case "sha1":
+		fp := make([]byte, 32)
+		fp = fp[0:0]
 		sha1160.Reset()
 		sha1160.Write(k)
-		fp = fp[0:0]
-		fp := sha1160.Sum(fp)
+		fp = sha1160.Sum(fp)
 		if false {
 	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
 	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]

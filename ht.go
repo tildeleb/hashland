@@ -258,7 +258,8 @@ func benchmark32s(n int) {
 	start := time.Now()
 	for i := 0; i < n; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
-		_ = jenkins.Hash232(bs, 0)
+		//_ = jenkins.Hash232(bs, 0)
+		_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 		//hashes[i] = h
 		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 	}
@@ -336,16 +337,18 @@ func benchmark32g(h nhash.HashF32, n int) {
 	fmt.Printf("benchmark32g: %h\n", bsec)
 	//return
 
-	fmt.Printf("benchmark32g: sort n=%d\n", n)
-	hashes.Sort()
-/*
-	for i := 0; i < n; i++ {
-		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+	if *cd {
+		fmt.Printf("benchmark32g: sort n=%d\n", n)
+		hashes.Sort()
+	/*
+		for i := 0; i < n; i++ {
+			fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+		}
+	*/
+		fmt.Printf("benchmark32g: dup check n=%d\n", n)
+		dups, mrun := checkForDups32(hashes)
+		fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
 	}
-*/
-	fmt.Printf("benchmark32g: dup check n=%d\n", n)
-	dups, mrun := checkForDups32(hashes)
-	fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
 }
 
 var benchmarks = []string{"j332c", "j232", "sbox", "CrapWow"}
@@ -440,10 +443,12 @@ var c = flag.Bool("c", false, "only test crypto hash functions")
 var h32 = flag.Bool("h32", false, "only test 32 bit has functions")
 var h64 = flag.Bool("h64", false, "only test 64 bit has functions")
 
+var b = flag.Bool("b", false, "run benchmarks")
+var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmarks")
+
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
 var ni = flag.Int("ni", 200000, "number of integer keys")
 var n = flag.Int("n", 100000000, "number of hashes for benchmark")
-var b = flag.Bool("b", false, "run benchmarks")
 var A = flag.Bool("A", false, "test A")
 var B = flag.Bool("B", false, "test B")
 var C = flag.Bool("C", false, "test C")
@@ -510,7 +515,7 @@ func main() {
 				runTestsWithFileAndHashes(v, []string{*hf})
 			}
 		}
-	case len(flag.Args()) == 0:
+	case len(flag.Args()) == 0 && !*b:
 		// no files specified run the only two tests we can with the specified hash functions
 		allTestsOff()
 		*I, *J = true, false
