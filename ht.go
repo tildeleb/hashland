@@ -33,9 +33,6 @@ var a32 hash.Hash32
 var k160 hash.Hash
 var skein256 hash.Hash
 var sha1160 hash.Hash
-var hashFunctions = []string{"adler32", "sbox", "CrapWow", "MaHash8v64", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
-	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l", 
-}
 
 var hf2 string
 
@@ -54,9 +51,9 @@ type Stats struct {
 	Q float64
 	//
 	Lines int
-	Size uint32
-	SizeLog2 uint32
-	SizeMask uint32
+	Size uint64
+	SizeLog2 uint64
+	SizeMask uint64
 }
 
 type HashTable struct {
@@ -64,7 +61,13 @@ type HashTable struct {
 	Stats
 }
 
-func hashf(k []byte) uint32 {
+// "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
+// "adler32" removed for the same reasons
+var hashFunctions = []string{"j264", "siphasha", "siphashb", "MaHash8v64", /*"spooky64", "spooky128h", "spooky128l", "spooky128xor",*/ "sbox", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "siphashal", "siphashah", "siphashbl", "siphashbh",
+	"skein256xor", "skein256low", "skein256hi", "sha1160", "keccak160l", 
+}
+
+func hashf(k []byte) uint64 {
 	var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	var fp = make([]byte, 32)
 	switch hf2 {
@@ -73,49 +76,71 @@ func hashf(k []byte) uint32 {
 		a32.Write(k)
 		h := a32.Sum32()
 		//fmt.Printf("a32 hash=0x%08x\n", h)
-		return h
+		return uint64(h)
 	case "sbox":
 		h := sbox.Sbox(k, 0)
-		return h
+		return uint64(h)
 	case "CrapWow":
 		h := crapwow.CrapWow(k, 0)
 		//fmt.Printf("key=%q, hash=0x%08x\n", string(k), hash)
-		return h
+		return uint64(h)
 	case "MaHash8v64":
 		h64 := mahash.MaHash8v64(k)
-		return uint32(h64)
+		return h64
 	case "j332c":
 		c, _ := jenkins.Jenkins364(k, len(k), 0, 0)
-		return c
+		return uint64(c)
 	case "j332b":
 		_, b := jenkins.Jenkins364(k, len(k), 0, 0)
-		return b
+		return uint64(b)
 	case "j232":
 		h := jenkins.Hash232(k, 0)
+		return uint64(h)
+	case "j264":
+		h := jenkins.Hash264(k, 0)
 		return h
 	case "j264l":
 		h := jenkins.Hash264(k, 0)
-		return uint32(h&0xFFFFFFFF)
+		return uint64(h&0xFFFFFFFF)
 	case "j264h":
 		h := jenkins.Hash264(k, 0)
-		return uint32((h>>32)&0xFFFFFFFF)
+		return uint64((h>>32)&0xFFFFFFFF)
 	case "j264xor":
 		h := jenkins.Hash264(k, 0)
-		return uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF)
+		return uint64(uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF))
 	case "spooky32":
-		return spooky.Hash32(k, 0)
+		return uint64(spooky.Hash32(k, 0))
+/*
+	case "spooky64":
+		return spooky.Hash64(k, 0)
+	case "spooky128h":
+		h, _ := spooky.Hash128(k, 0)
+		return h
+	case "spooky128l":
+		_, l := spooky.Hash128(k, 0)
+		return l
+	case "spooky128xor":
+		h, l := spooky.Hash128(k, 0)
+		return h ^ l
+*/
+	case "siphasha":
+		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
+		return a
+	case "siphashb":
+		b, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+		return b
 	case "siphashal":
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
-		return uint32(a&0xFFFFFFFF)
+		return uint64(a&0xFFFFFFFF)
 	case "siphashah":
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
-		return uint32((a>>32)&0xFFFFFFFF)
+		return uint64((a>>32)&0xFFFFFFFF)
 	case "siphashbl":
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return uint32(b&0xFFFFFFFF)
+		return uint64(b&0xFFFFFFFF)
 	case "siphashbh":
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return uint32((b>>32)&0xFFFFFFFF)
+		return uint64((b>>32)&0xFFFFFFFF)
 	case "keccak160l":
 		k160.Reset()
 		k160.Write(k)
@@ -127,9 +152,9 @@ func hashf(k []byte) uint32 {
 	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
 	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
 	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-	        return uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low)
+	        return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3])
+			return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 		}
 	case "skein256xor":
 		skein256.Reset()
@@ -142,9 +167,9 @@ func hashf(k []byte) uint32 {
 	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
 	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
 	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-	        return uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low)
+	        return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-	    	return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3])
+	    	return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 	    }
 	case "skein256low":
 		skein256.Reset()
@@ -152,14 +177,14 @@ func hashf(k []byte) uint32 {
 		fp = fp[0:0]
 		fp := skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-    	return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3])
+    	return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 	case "skein256hi":
 		skein256.Reset()
 		skein256.Write(k)
 		fp = fp[0:0]
 		fp := skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-    	return uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31])
+    	return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
 	case "sha1160":
 		sha1160.Reset()
 		sha1160.Write(k)
@@ -170,9 +195,9 @@ func hashf(k []byte) uint32 {
 	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
 	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
 	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-        	return uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low)
+        	return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3])
+			return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 		}
 		default:
 			fmt.Printf("hf=%q\n", hf2)
@@ -184,17 +209,17 @@ func hashf(k []byte) uint32 {
 func NewHashTable(lines int) *HashTable {
 	ht := new(HashTable)
 	ht.Lines = lines
-	ht.SizeLog2 = NextLog2(uint32(ht.Lines)) + uint32(*extra)
+	ht.SizeLog2 = uint64(NextLog2(uint32(ht.Lines)) + uint32(*extra))
 	ht.Size = 1 << ht.SizeLog2
 	if *prime {
-		ht.Size = uint32(primes.NextPrime(int(ht.Size)))
+		ht.Size = uint64(primes.NextPrime(int(ht.Size)))
 	}
 	ht.SizeMask = ht.Size - 1
 	ht.Buckets = make([][]Bucket, ht.Size, ht.Size)
 	return ht
 }
 
-func (ht *HashTable) Add(ka []byte) {
+func (ht *HashTable) Insert(ka []byte) {
 	k := make([]byte, len(ka), len(ka))
 	k = k[:]
 	amt := copy(k, ka)
@@ -202,7 +227,7 @@ func (ht *HashTable) Add(ka []byte) {
 		panic("Add")
 	}
 	ht.Inserts++
-	idx := uint32(0)
+	idx := uint64(0)
 	h := hashf(k) // jenkins.Hash232(k, 0)
 	if *prime {
 		idx = h % ht.Size
@@ -243,7 +268,7 @@ func (ht *HashTable) Add(ka []byte) {
 			}
 			idx++
 			cnt++
-			if idx > uint32(ht.Size) - 1 {
+			if idx > ht.Size - 1 {
 				pass++
 				if pass > 1 {
 					panic("Add: pass")
@@ -254,11 +279,12 @@ func (ht *HashTable) Add(ka []byte) {
 			// first scan slice for dups
 			for j := range ht.Buckets[idx] {
 				bh := hashf(ht.Buckets[idx][j].Key)
-				//fmt.Printf("idx=%d, j=%d, h=0x%08x, hash=0x%08x, key=%q", idx, j, bh, h, ht.Buckets[idx][j].Key)
+				//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, ht.Buckets[idx][j].Key)
 				if bh == h {
 					if *pd {
-						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
-						fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", bh, idx, ht.Buckets[idx][0].Key)
+						fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q, bkey=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, k, ht.Buckets[idx][j].Key)
+						//fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
+						//fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", bh, idx, ht.Buckets[idx][0].Key)
 					}
 					ht.Dups++
 				}
@@ -375,10 +401,10 @@ func TestA(file string, hf2 string) (ht *HashTable) {
 	}
 */
 	var addLine = func(line string) {
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
 
-	fmt.Printf("\t%20q: ", hf2)
+	//fmt.Printf("\t%20q: ", hf2)
 	//fmt.Printf("run: file=%q\n", file)
 	lines := ReadFile(file, nil)
 	//fmt.Printf("run: lines=%d, hf2=%q\n", lines, hf2)
@@ -389,12 +415,10 @@ func TestA(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestB(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line += "\n"
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -402,12 +426,10 @@ func TestB(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestC(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line += line + "\n\n\n\n"
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -415,12 +437,10 @@ func TestC(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestD(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line = "ABCDE" + line
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -428,12 +448,10 @@ func TestD(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestE(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line = line + line
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -441,12 +459,10 @@ func TestE(file string, hf2 string) (ht *HashTable) {
 }
 
 func TestF(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line = line + line + line + line
-		ht.Add([]byte(line))
+		ht.Insert([]byte(line))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -461,13 +477,11 @@ func reverse(s string) string {
 }
 
 func TestG(file string, hf2 string) (ht *HashTable) {
-	//var lines int
 	var addLine = func(line string) {
 		line2 := reverse(line)
 		//fmt.Printf("line=%q, line2=%q", line, line2)
-		ht.Add([]byte(line2))
+		ht.Insert([]byte(line2))
 	}
-	fmt.Printf("\t%20q: ", hf2)
 	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines)
 	ReadFile(file, addLine)
@@ -480,25 +494,23 @@ func TestH(file string, hf2 string) (ht *HashTable) {
 		cnt++
 	}
 	var addWord = func(word string) {
-		ht.Add([]byte(word))
+		ht.Insert([]byte(word))
 	}
 	//test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-	test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-	genWords(test, counter)
-	fmt.Printf("\t%20q: ", hf2)
+
+	genWords(letters, counter)
 	ht = NewHashTable(cnt)
-	genWords(test, addWord)
+	genWords(letters, addWord)
 	return
 }
 
 func TestI(file string, hf2 string) (ht *HashTable) {
-	//fmt.Printf("n=%d\n", *n)
-	fmt.Printf("\t%20q: ", hf2)
+	//fmt.Printf("ni=%d\n", *ni)
 	bs := make([]byte, 4, 4)
-	ht = NewHashTable(*n)
-	for i := 0; i < *n; i++ {
+	ht = NewHashTable(*ni)
+	for i := 0; i < *ni; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-		ht.Add(bs)
+		ht.Insert(bs)
 		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 	}
 	return
@@ -509,13 +521,12 @@ func TestJ(file string, hf2 string) (ht *HashTable) {
 	keys := length * 8
 	key := make([]byte, length, length)
 	key = key[:]
-	fmt.Printf("\t%20q: ", hf2)
 	ht = NewHashTable(keys)
 	for k := range key {
 		for i := uint(0); i < 8; i++ {
 			key[k] = 1 << i
 			//fmt.Printf("k=%d, i=%d, key=%v\n", k, i, key)
-			ht.Add(key)
+			ht.Insert(key)
 			key[k] = 0
 		}
 	}
@@ -698,32 +709,175 @@ func benchmark(hashes []string, n int) {
 	}
 }
 
+type Test struct {
+	name		string
+	flag		**bool
+	ptf			func(file string, hashf string) (ht *HashTable)
+	desc		string
+}
+
+var Tests = []Test{
+	{"TestA", &A, TestA, "insert keys"},
+	{"TestB", &B, TestB, "add newline to key"},	
+	{"TestC", &C, TestC, "add 4 newlines to key"},
+	{"TestD", &D, TestD, "prepend ABCDE to key"},
+	{"TestE", &E, TestE, "add 1 duplicate key"},		
+	{"TestF", &F, TestF, "add 3 duplicate keys"},
+	{"TestG", &G, TestF, "reverse letter order in key"},
+	{"TestH", &H, TestH, "words from letter combinations in wc"},
+	{"TestI", &I, TestI, "integers from 0 to ni-1 (does not read file)"},
+	{"TestJ", &J, TestJ, "one bit keys (does not read file)"},
+}
+
 func runTestsWithFileAndHashes(file string, hf []string) {
-	var s *HashTable
+	var test Test
 	var print = func(s *HashTable) {
 		q := s.HashQuality()
 		if *oa {
-			if s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries {
+			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
 				panic("runTestsWithFileAndHashes")
 			}
-			fmt.Printf("lines=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
-				s.Lines, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
+			fmt.Printf("inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
+				s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
 		} else {
-			if s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries {
+			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
+				fmt.Printf("lines=%d, inserts=%d, probes=%d, entries=%d\n", s.Lines, s.Inserts, s.Probes, s.Entries)
 				panic("runTestsWithFileAndHashes")
 			}
-			fmt.Printf("lines=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
-				s.Lines, s.Size, s.Nbuckets, s.Dups, q)
+			fmt.Printf("inserts=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
+				s.Inserts, s.Size, s.Nbuckets, s.Dups, q)
 		}
 	}
-	fmt.Printf("file=%q\n", file)
-	for {
-		switch {
-		case *b:
-			benchmark32s(*n)
-			benchmark(benchmarks, *n)
-			*b = false
-		case *A:
+	if file != "" {
+		fmt.Printf("file=%q\n", file)
+	}
+	for _, test = range Tests {
+		if **test.flag {
+			fmt.Printf("%s - %s\n", test.name, test.desc)
+			for _, hf2 = range hf {
+				fmt.Printf("\t%20q: ", hf2)
+				ht := test.ptf(file, hf2)
+				print(ht)
+			}
+		}
+	}
+	if *b {
+		benchmark32s(*n)
+		benchmark(benchmarks, *n)
+	}
+}
+
+var file = flag.String("file", "", "words to read")
+var hf = flag.String("hf", "all", "hash function")
+var extra = flag.Int("e", 1, "extra bis in table size")
+var prime = flag.Bool("p", false, "table size is primes and use mod")
+var all = flag.Bool("a", false, "run all tests")
+var pd = flag.Bool("pd", false, "print duplicate hashes")
+var oa = flag.Bool("oa", false, "open addressing (no buckets)")
+//var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
+var ni = flag.Int("ni", 200000, "number of integer keys")
+var n = flag.Int("n", 100000000, "number of hashes for benchmark")
+var b = flag.Bool("b", false, "run benchmarks")
+var A = flag.Bool("A", false, "test A")
+var B = flag.Bool("B", false, "test B")
+var C = flag.Bool("C", false, "test C")
+var D = flag.Bool("D", false, "test D")
+var E = flag.Bool("E", false, "test E")
+var F = flag.Bool("F", false, "test F")
+var G = flag.Bool("G", false, "test G")
+var H = flag.Bool("H", false, "test H")
+var I = flag.Bool("I", false, "test I")
+var J = flag.Bool("J", false, "test J")
+
+var letters = []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
+var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J}
+
+
+func allTestsOn() {
+	*A, *B, *C, *D, *E, *F, *G, *H , *I, *J = true, true, true, true, true, true, true, true, true, true
+}
+
+func allTestsOff() {
+	*A, *B, *C, *D, *E, *F, *G, *H , *I, *J = false, false, false, false, false, false, false, false, false, false
+}
+
+
+func main() {
+/*
+	var cnt int
+	var f = func(word string) {
+		cnt++
+		//fmt.Printf("%q\n", word)
+	}
+
+	test := []string{"ab", "cd"}
+	test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
+	genWords(test, f)
+	fmt.Printf("cnt=%d\n", cnt)
+	return
+*/
+	flag.Parse()
+	if *all {
+		allTestsOn()
+	}
+	//fmt.Printf("%d lines read\n", lines)
+
+	// read file and count lines
+	// create table
+	// read file and insert
+	// stats
+
+	k160 = keccak.New160()
+	skein256 = skein.New256()
+	//skein32 := skein.New(256, 32)
+	sha1160 = sha1.New()
+	a32 = adler32.New()
+	switch {
+	case *file != "":
+		if *hf == "all" {
+			runTestsWithFileAndHashes(*file, hashFunctions)
+		} else {
+			hf2 = *hf
+			runTestsWithFileAndHashes(*file, []string{*hf})
+		}
+	case len(flag.Args()) != 0:
+		for _, v := range flag.Args() {
+			if *hf == "all" {
+				runTestsWithFileAndHashes(v, hashFunctions)
+			} else {
+				hf2 = *hf
+				runTestsWithFileAndHashes(v, []string{*hf})
+			}
+		}
+	case len(flag.Args()) == 0:
+		fmt.Printf("default\n")
+		// no files specified run the only two tests we can with the specified hash functions
+		allTestsOff()
+		*I, *J = true, true
+		if *hf == "all" {
+			runTestsWithFileAndHashes("", hashFunctions)
+		} else {
+			hf2 = *hf
+			runTestsWithFileAndHashes("", []string{*hf})
+		}
+	}
+	if *b {
+		benchmark32s(*n)
+		fmt.Printf("\n")
+		benchmark(benchmarks, *n)
+	}
+}
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "%s: [flags] [dictionary-files]\n", os.Args[0])
+    	flag.PrintDefaults()
+	}
+}
+
+/*
+		case *test = A:
 			fmt.Printf("TestA (simple hash check)\n")
 			for _, hf2 = range hf {
 				s = TestA(file, hf2)
@@ -794,92 +948,4 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 				print(s)
 			}
 			*J = false
-		default:
-			return
-		}
-		fmt.Printf("\n")
-	}
-}
-
-var file = flag.String("file", "", "words to read")
-var hf = flag.String("hf", "all", "hash function")
-var extra = flag.Int("e", 1, "extra bis in table size")
-var prime = flag.Bool("p", false, "table size is primes and use mod")
-var all = flag.Bool("a", false, "run all tests")
-var pd = flag.Bool("pd", false, "print duplicate hashes")
-var oa = flag.Bool("oa", false, "open addressing (no buckets)")
-var n = flag.Int("n", 100000000, "number of hashes for benchmark")
-var b = flag.Bool("b", false, "run benchmarks")
-var A = flag.Bool("A", false, "test A")
-var B = flag.Bool("B", false, "test B")
-var C = flag.Bool("C", false, "test C")
-var D = flag.Bool("D", false, "test D")
-var E = flag.Bool("E", false, "test E")
-var F = flag.Bool("F", false, "test F")
-var G = flag.Bool("G", false, "test G")
-var H = flag.Bool("H", false, "test H")
-var I = flag.Bool("I", false, "test I")
-var J = flag.Bool("J", false, "test J")
-
-func main() {
-/*
-	var cnt int
-	var f = func(word string) {
-		cnt++
-		//fmt.Printf("%q\n", word)
-	}
-
-	test := []string{"ab", "cd"}
-	test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-	genWords(test, f)
-	fmt.Printf("cnt=%d\n", cnt)
-	return
 */
-	flag.Parse()
-	if *all {
-		*b = true
-		*A, *B, *C, *D, *E, *F, *G, *H , *I = true, true, true, true, true, true, true, true, true
-	}
-	//fmt.Printf("%d lines read\n", lines)
-
-	// read file and count lines
-	// create table
-	// read file and insert
-	// stats
-
-	k160 = keccak.New160()
-	skein256 = skein.New256()
-	//skein32 := skein.New(256, 32)
-	sha1160 = sha1.New()
-	a32 = adler32.New()
-	switch {
-	case *file != "":
-		if *hf == "all" {
-			runTestsWithFileAndHashes(*file, hashFunctions)
-		} else {
-			hf2 = *hf
-			runTestsWithFileAndHashes(*file, []string{*hf})
-		}
-	case len(flag.Args()) != 0:
-		for _, v := range flag.Args() {
-			if *hf == "all" {
-				runTestsWithFileAndHashes(v, hashFunctions)
-			} else {
-				hf2 = *hf
-				runTestsWithFileAndHashes(v, []string{*hf})
-			}
-		}
-	case *b:
-		benchmark32s(*n)
-		fmt.Printf("\n")
-		benchmark(benchmarks, *n)
-	}
-}
-
-func init() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "%s: [flags] [dictionary-files]\n", os.Args[0])
-    	flag.PrintDefaults()
-	}
-}
