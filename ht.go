@@ -13,6 +13,7 @@ import (
 	"github.com/tildeleb/hrff"
 	. "github.com/tildeleb/hashland/hashf" // cleaved
 	. "github.com/tildeleb/hashland/hashtable" // cleaved
+	"github.com/tildeleb/hashland/smhasher"
 	"github.com/tildeleb/hashland/nhash"
 	"github.com/tildeleb/hashland/jenkins" // remove
 	"sort"
@@ -72,7 +73,7 @@ func TestA(file string, hf2 string) (ht *HashTable) {
 	//fmt.Printf("\t%20q: ", hf2)
 	//fmt.Printf("run: file=%q\n", file)
 	lines := ReadFile(file, nil)
-	//fmt.Printf("run: lines=%d, hf2=%q\n", lines, hf2)
+	//fmt.Printf("TestA: lines=%d, hf2=%q\n", lines, hf2)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
 	//fmt.Printf("ht=%v\n", ht)
 	ReadFile(file, addLine)
@@ -405,23 +406,6 @@ var Tests = []Test{
 
 func runTestsWithFileAndHashes(file string, hf []string) {
 	var test Test
-	var print = func(s *HashTable) {
-		q := s.HashQuality()
-		if *oa {
-			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
-				panic("runTestsWithFileAndHashes")
-			}
-			fmt.Printf("inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
-				s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
-		} else {
-			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
-				fmt.Printf("lines=%d, inserts=%d, probes=%d, entries=%d\n", s.Lines, s.Inserts, s.Probes, s.Entries)
-				panic("runTestsWithFileAndHashes")
-			}
-			fmt.Printf("inserts=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
-				s.Inserts, s.Size, s.Nbuckets, s.Dups, q)
-		}
-	}
 	if file != "" {
 		fmt.Printf("file=%q\n", file)
 	}
@@ -441,7 +425,7 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 				}
 				fmt.Printf("\t%20q: ", Hf2)
 				ht := test.ptf(file, Hf2)
-				print(ht)
+				ht.Print()
 			}
 		}
 	}
@@ -464,6 +448,8 @@ var h32 = flag.Bool("h32", false, "only test 32 bit has functions")
 var h64 = flag.Bool("h64", false, "only test 64 bit has functions")
 
 var b = flag.Bool("b", false, "run benchmarks")
+var sm = flag.Bool("sm", false, "run SMHasher")
+var v = flag.Bool("v", false, "verbose")
 var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmarks")
 
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
@@ -518,6 +504,28 @@ func main() {
 	// read file and insert
 	// stats
 
+	if  *sm {
+		if *hf == "all" {
+			for _, Hf2 = range TestHashFunctions {
+				hi := HashFunctions[Hf2]
+				if *c && !hi.Crypto {
+					continue
+				}
+				if *h32 && hi.Size != 32 {
+					continue
+				}
+				if *h64 && hi.Size != 64 {
+					continue
+				}
+				fmt.Printf("%q\n", Hf2)
+				smhasher.RunSMhasher(Hf2, *v)
+			}
+		} else {
+			Hf2 = *hf
+			smhasher.RunSMhasher(Hf2, *v)	
+		}
+	}
+
 	switch {
 	case *file != "":
 		if *hf == "all" {
@@ -545,11 +553,28 @@ func main() {
 			Hf2 = *hf
 			runTestsWithFileAndHashes("", []string{*hf})
 		}
-	}
-	if *b {
-		benchmark32s(*n)
+	case *b:
+		//benchmark32s(*n)
 		fmt.Printf("\n")
-		benchmark(benchmarks, *n)
+		if *hf == "all" {
+			for _, Hf2 = range TestHashFunctions {
+				hi := HashFunctions[Hf2]
+				if *c && !hi.Crypto {
+					continue
+				}
+				if *h32 && hi.Size != 32 {
+					continue
+				}
+				if *h64 && hi.Size != 64 {
+					continue
+				}
+				fmt.Printf("%q\n", Hf2)
+				benchmark(benchmarks, *n)
+			}
+		} else {
+			Hf2 = *hf
+			benchmark32g(nil, *n)
+		}
 	}
 }
 

@@ -51,6 +51,7 @@ var HashFunctions = map[string]HashFunction{
 	"spooky128h":		HashFunction{"spooky128h", 		64,		false,	"jenkins, spooky, 128 bit, high bits"},
 	"spooky128l":		HashFunction{"spooky128l", 		64,		false,	"jenkins, spooky, 128 bit, low bits"},
 	"spooky128xor":		HashFunction{"spooky128xor",	64,		false,	"jenkins, spooky, 128, high xor low bits"},
+	"j364":				HashFunction{"j364", 			64,		false,	"jenkins, lookup3. 64 bit, c low order bits, b high order bits"},
 	"j264":				HashFunction{"j264", 			64,		false,	"jenkins, lookup8. 64 bit"},
 	"j332c":			HashFunction{"j332c", 			32,		false,	"jenkins, lookup3, 32 bit, c bits"},
 	"j332b":			HashFunction{"j332b", 			32,		false,	"jenkins, lookup3, 32 bit, b bits"},
@@ -72,7 +73,7 @@ var HashFunctions = map[string]HashFunction{
 
 // "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
 // "adler32" removed for the same reasons
-var TestHashFunctions = []string{"j264", "siphash128a", "siphash128b", "MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor", "sbox",
+var TestHashFunctions = []string{"j364", "j264", "siphash128a", "siphash128b", "MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor", "sbox",
 	"j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",
 	"siphash64al", "siphash64ah", "siphash64bl", "siphash64bh",
 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
@@ -95,7 +96,13 @@ func Halloc(hfs string) (hf32 nhash.HashF32) {
 var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 // crappy generic adapter that just slows us down
 // will be removed
-func Hashf(k []byte) uint64 {
+func Hashf(k []byte, seed uint64) uint64 {
+	var sipSeedSet = func(seed uint64) {
+		seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7] =
+			byte(seed&0xFF), byte((seed>>8)&0xFF), byte((seed>>16)&0xFF), byte((seed>>24)&0xFF),
+			byte((seed>>32)&0xFF), byte((seed>>40)&0xFF), byte((seed>>48)&0xFF), byte((seed>>56)&0xFF)
+		seeds[8], seeds[9], seeds[10], seeds[11], seeds[12], seeds[13], seeds[14], seeds[15] = seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7]
+	}
 /*
 	_, ok := HashFunctions[Hf2]
 	if !ok {
@@ -111,68 +118,78 @@ func Hashf(k []byte) uint64 {
 		//fmt.Printf("a32 hash=0x%08x\n", h)
 		return uint64(h)
 	case "sbox":
-		h := sbox.Sbox(k, 0)
+		h := sbox.Sbox(k, uint32(seed))
 		return uint64(h)
 	case "CrapWow":
-		h := crapwow.CrapWow(k, 0)
+		h := crapwow.CrapWow(k, uint32(seed))
 		//fmt.Printf("key=%q, hash=0x%08x\n", string(k), hash)
 		return uint64(h)
 	case "MaHash8v64":
 		h64 := mahash.MaHash8v64(k)
 		return h64
+	case "j364":
+		c, b := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
+		return uint64(b)<<32 | uint64(c)
 	case "j332c":
-		c, _ := jenkins.Jenkins364(k, len(k), 0, 0)
+		c, _ := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
 		return uint64(c)
 	case "j332b":
-		_, b := jenkins.Jenkins364(k, len(k), 0, 0)
+		_, b := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
 		return uint64(b)
 	case "j232":
-		h := jenkins.Hash232(k, 0)
+		h := jenkins.Hash232(k, uint32(seed))
 		return uint64(h)
 	case "j264":
-		h := jenkins.Hash264(k, 0)
+		h := jenkins.Hash264(k, seed)
 		return h
 	case "j264l":
-		h := jenkins.Hash264(k, 0)
+		h := jenkins.Hash264(k, seed)
 		return uint64(h&0xFFFFFFFF)
 	case "j264h":
-		h := jenkins.Hash264(k, 0)
+		h := jenkins.Hash264(k, seed)
 		return uint64((h>>32)&0xFFFFFFFF)
 	case "j264xor":
-		h := jenkins.Hash264(k, 0)
+		h := jenkins.Hash264(k, seed)
 		return uint64(uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF))
 	case "spooky32":
-		return uint64(spooky.Hash32(k, 0))
+		return uint64(spooky.Hash32(k, uint32(seed)))
 	case "spooky64":
-		return spooky.Hash64(k, 0)
+		return spooky.Hash64(k, seed)
 	case "spooky128h":
-		h, _ := spooky.Hash128(k, 0)
+		h, _ := spooky.Hash128(k, seed)
 		return h
 	case "spooky128l":
-		_, l := spooky.Hash128(k, 0)
+		_, l := spooky.Hash128(k, seed)
 		return l
 	case "spooky128xor":
-		h, l := spooky.Hash128(k, 0)
+		h, l := spooky.Hash128(k, seed)
 		return h ^ l
 	case "siphash64":
+		sipSeedSet(seed)
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return a
 	case "siphash128a":
+		sipSeedSet(seed)
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return a
 	case "siphash128b":
+		sipSeedSet(seed)
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return b
 	case "siphash64al":
+		sipSeedSet(seed)
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return uint64(a&0xFFFFFFFF)
 	case "siphash64ah":
+		sipSeedSet(seed)
 		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
 		return uint64((a>>32)&0xFFFFFFFF)
 	case "siphash64bl":
+		sipSeedSet(seed)
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64(b&0xFFFFFFFF)
 	case "siphash64bh":
+		sipSeedSet(seed)
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64((b>>32)&0xFFFFFFFF)
 	case "keccak160l":

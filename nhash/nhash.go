@@ -73,7 +73,7 @@ type HashF64 interface {
 // HashF128 is the interface that all non-streaming 128 bit hash functions implement.
 type HashF128 interface {
 	HashFunction
-	Hash64(b []byte, seeds ...uint64) (uint64, uint64)
+	Hash128(b []byte, seeds ...uint64) (uint64, uint64)
 }
 
 // HashGeneric is generic interface that non-streaming, typicall crytpo hash functions implement.

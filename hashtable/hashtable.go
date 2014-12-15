@@ -31,6 +31,7 @@ type Stats struct {
 type HashTable struct {
 	Buckets [][]Bucket
 	Stats
+	Seed uint64
 	extra int
 	pd bool
 	oa bool
@@ -75,12 +76,15 @@ func NextLog2(x uint32) uint32 {
 func NewHashTable(size, extra int, pd, oa, prime bool) *HashTable {
 	ht := new(HashTable)
 	ht.Lines = size
+	ht.extra = extra
 	ht.SizeLog2 = uint64(NextLog2(uint32(ht.Lines)) + uint32(extra))
 	ht.Size = 1 << ht.SizeLog2
 	ht.prime = prime
 	if prime {
 		ht.Size = uint64(primes.NextPrime(int(ht.Size)))
 	}
+	ht.pd = pd
+	ht.oa = oa
 	ht.SizeMask = ht.Size - 1
 	ht.Buckets = make([][]Bucket, ht.Size, ht.Size)
 	return ht
@@ -95,7 +99,7 @@ func (ht *HashTable) Insert(ka []byte) {
 	}
 	ht.Inserts++
 	idx := uint64(0)
-	h := hashf.Hashf(k) // jenkins.Hash232(k, 0)
+	h := hashf.Hashf(k, ht.Seed) // jenkins.Hash232(k, 0)
 	if ht.prime {
 		idx = h % ht.Size
 	} else {
@@ -125,7 +129,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			}
 
 			// check for a duplicate key
-			bh := hashf.Hashf(ht.Buckets[idx][0].Key)
+			bh := hashf.Hashf(ht.Buckets[idx][0].Key, ht.Seed)
 			if bh == h {
 				if ht.pd {
 					fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
@@ -145,7 +149,7 @@ func (ht *HashTable) Insert(ka []byte) {
 		} else {
 			// first scan slice for dups
 			for j := range ht.Buckets[idx] {
-				bh := hashf.Hashf(ht.Buckets[idx][j].Key)
+				bh := hashf.Hashf(ht.Buckets[idx][j].Key, ht.Seed)
 				//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, ht.Buckets[idx][j].Key)
 				if bh == h {
 					if ht.pd {
@@ -184,4 +188,27 @@ func (ht *HashTable) HashQuality() float64 {
 	ht.Entries = entries
 	ht.Q = n / d
 	return n / d
+}
+
+
+func (s *HashTable) Print() {
+	q := s.HashQuality()
+	if s.oa {
+/*
+		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
+			panic("runTestsWithFileAndHashes")
+		}
+*/
+		fmt.Printf("inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
+			s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
+	} else {
+/*
+		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
+			fmt.Printf("lines=%d, inserts=%d, probes=%d, entries=%d\n", s.Lines, s.Inserts, s.Probes, s.Entries)
+			panic("runTestsWithFileAndHashes")
+		}
+*/
+		fmt.Printf("inserts=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
+			s.Inserts, s.Size, s.Nbuckets, s.Dups, q)
+	}
 }
