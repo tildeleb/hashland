@@ -1,41 +1,42 @@
 // Copyright 2009 The Go Authors. All rights reserved.
-// domain aeshash implementation at https://github.com/tildeleb/hasland/aeshash
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
 // liberated from go runtime/asm_amd64.s
-
+//
 // hash function using AES hardware instructions
-// func Hash(b []byte, seed uint64) uint64
 
+#include "textflag.h"
 #include "funcdata.h"
 
+// func Hash(b []byte, seed uint64) uint64
 TEXT ·Hash(SB),3,$0-40
-	MOVQ	b+0(FP), AX			// ptr to data
-	MOVQ	b_len+8(FP), CX		// size
+	MOVQ	b_base+0(FP), AX	// ptr to bytes
+	MOVQ	b_len+8(FP), CX		// length of slice
 	MOVQ	seed+24(FP), X0		// seed to low 64 bits of xmm0
 	CALL	·aeshashbody(SB)
-	MOVQ	X0, res+30(FP)
+	MOVQ	X0, ret+32(FP)
 	RET
 
 // func HashStr(s string, seed uint64) uint64
 TEXT ·HashStr(SB),3,$0-32
-	MOVQ	s+0(FP), AX	// ptr to string struct
-	MOVQ	(AX), AX	// string data
-	// s+8(FP) is ignored, it is always sizeof(String)
-	MOVQ	8(AX), CX	// length of string
-	MOVQ	seed+24(FP), X0		// seed to low 64 bits of xmm0
+	MOVQ	s+0(FP), AX			// ptr to string struct
+	MOVQ	(AX), AX			// string bytes
+								// s+8(FP) is ignored, it is always sizeof(String)
+	MOVQ	8(AX), CX			// length of string
+	MOVQ	seed+16(FP), X0		// seed to low 64 bits of xmm0
 	CALL	·aeshashbody(SB)
-	MOVQ	X0, res+24(FP)
+	MOVQ	X0, ret+24(FP)
 	RET
+
+//	NO_LOCAL_POINTERS
+//	JMP aesret
 // 3,$0-40
 // AX: data
 // CX: length
 // X0: seed
 // func aeshashbody()
-TEXT ·aeshashbody(SB),$0
-	NO_LOCAL_POINTERS
-	JMP aesret
+TEXT ·aeshashbody(SB),0,$0-0
 	PINSRQ	$1, CX, X0		// size to high 64 bits of xmm0
 	MOVO	·aeskeysched+0(SB), X2
 	MOVO	·aeskeysched+16(SB), X3
@@ -119,6 +120,7 @@ TEXT ·Hash32(SB),3,$0-24
 
 
 // simple mask to get rid of data in the high part of the register.
+// var masks [32]uint64
 DATA masks<>+0x00(SB)/8, $0x0000000000000000
 DATA masks<>+0x08(SB)/8, $0x0000000000000000
 DATA masks<>+0x10(SB)/8, $0x00000000000000ff
@@ -151,11 +153,12 @@ DATA masks<>+0xe0(SB)/8, $0xffffffffffffffff
 DATA masks<>+0xe8(SB)/8, $0x0000ffffffffffff
 DATA masks<>+0xf0(SB)/8, $0xffffffffffffffff
 DATA masks<>+0xf8(SB)/8, $0x00ffffffffffffff
-GLOBL masks<>(SB),$256
+GLOBL masks<>(SB), RODATA, $256
 
 // these are arguments to pshufb.  They move data down from
 // the high bytes of the register to the low bytes of the register.
 // index is how many bytes to move.
+// var shifts [32]uint64
 DATA shifts<>+0x00(SB)/8, $0x0000000000000000
 DATA shifts<>+0x08(SB)/8, $0x0000000000000000
 DATA shifts<>+0x10(SB)/8, $0xffffffffffffff0f
@@ -188,5 +191,5 @@ DATA shifts<>+0xe0(SB)/8, $0x0908070605040302
 DATA shifts<>+0xe8(SB)/8, $0xffff0f0e0d0c0b0a
 DATA shifts<>+0xf0(SB)/8, $0x0807060504030201
 DATA shifts<>+0xf8(SB)/8, $0xff0f0e0d0c0b0a09
-GLOBL shifts<>(SB),$256
+GLOBL shifts<>(SB), RODATA, $256
 

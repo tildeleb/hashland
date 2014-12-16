@@ -2,6 +2,8 @@ package aeshash
 
 import _ "unsafe"
 
+var masks [32]uint64
+var shifts [32]uint64
 
 // used in asm_{386,amd64}.s
 const hashRandomBytes = 32
@@ -17,10 +19,6 @@ func Hash(b []byte, seed uint64) uint64
 func HashStr(s string, seed uint64) uint64
 func Hash64(v uint64, s uint64) uint64
 func Hash32(v uint32, s uint64) uint64
-
-//func Hash32(p unsafe.Pointer, s, h uintptr) uintptr
-//func Hash64(p unsafe.Pointer, s, h uintptr) uintptr
-//func Hash(b []uint64, s uint64) uint64
 
 //func aeshash(p unsafe.Pointer, s, h uintptr) uintptr
 //func aeshash32(p unsafe.Pointer, s, h uintptr) uintptr

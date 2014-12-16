@@ -945,9 +945,10 @@ func (d *State364) Hash64(b []byte, seeds ...uint64) uint64 {
 		d.pb = uint32(seeds[0]>>32)
 	}
 	d.pc, d.pb = Jenkins364(b, len(b), d.pc, d.pb)
+	//fmt.Printf("pc=0x%08x, pb=0x%08x\n", d.pc, d.pb)
 
 	// pc is better mixed than pb so pc goes in the low order bits
-	d.hash = uint64(d.pb<<32) | uint64(d.pc)
+	d.hash = uint64(d.pb)<<32 | uint64(d.pc)
 	return d.hash
 }
 

@@ -266,7 +266,7 @@ func benchmark32s(n int) {
 		fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
 		start := time.Now()
 		for i := 0; i < n; i++ {
-			bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
+			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 			_ = jenkins.Hash232(bs, 0)
 			//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 			//hashes[i] = h
@@ -344,7 +344,7 @@ func benchmark32g(h nhash.HashF32, n int) {
 		fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
 		start := time.Now()
 		for i := 0; i < n; i++ {
-			bs[0], bs[1], bs[2], bs[3] = byte(i)&0xFF, (byte(i)>>8)&0xFF, (byte(i)>>16)&0xFF, (byte(i)>>24)&0xFF
+			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 			//_ = jenkins.Hash232(bs, 0)
 			_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 			//hashes[i] = h
