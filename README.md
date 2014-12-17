@@ -14,7 +14,7 @@ HashLand contains the following functionality.
 
 1. A (currently barely) curated set of pure Go hash functions including various jenkins hash functions and his latest SpookyV2, Murmur3, Cityhash, sbox, MaHash8v64, CrapWow, Siphash, keccak, skein and more.
 
-2. AES based hash functions extracted Go's runtime and used by the map implementation on Intel X86 architecture machines that support AES-NI. (not working yet)
+2. AES based hash functions extracted Go's runtime and used by the map implementation on Intel X86 architecture machines that support AES-NI.
 
 3. Tests which (mostly) use file based dictionaries to gather statistics about the above hash functions.
 
@@ -74,6 +74,7 @@ Non Crypto Hash Functions
 
 Crypto Hash Functions
 ---------------------
+	"aeshash64"
 	"siphashal": 
 	"siphashah": 
 	"siphashbl": 
@@ -189,64 +190,56 @@ Benchmarks (currently broken)
 Tests
 -----
 
-	leb@hula:hashland % hashland -A -hf="all" -oa db/words-vak.txt 
-	file="db/words-vak.txt"
+	leb@hula:~/gotest/src/github.com/tildeleb/hashland % hashland -oa -A db/pagecounts-20140101-000000
+	file="db/pagecounts-20140101-000000", lines=6460902
+	Test0 - ReadFile
+		          "ReadFile": size=16777216, inserts=0, cols=0, probes=0, cpi=0.00%, ppi=0NaN, dups=0, time=1.81s
 	TestA - insert keys
-		              "j364": inserts=326796, size=1048576, cols=51054, probes=349873, cpi=4.87%, ppi=1.07, dups=0
-		              "j264": inserts=326796, size=1048576, cols=50784, probes=349673, cpi=4.84%, ppi=1.07, dups=0
-		       "siphash128a": inserts=326796, size=1048576, cols=50847, probes=349580, cpi=4.85%, ppi=1.07, dups=0
-		       "siphash128b": inserts=326796, size=1048576, cols=50826, probes=350076, cpi=4.85%, ppi=1.07, dups=0
-		        "MaHash8v64": inserts=326796, size=1048576, cols=51022, probes=349666, cpi=4.87%, ppi=1.07, dups=0
-		          "spooky64": inserts=326796, size=1048576, cols=50673, probes=349547, cpi=4.83%, ppi=1.07, dups=0
-		        "spooky128h": inserts=326796, size=1048576, cols=50673, probes=349547, cpi=4.83%, ppi=1.07, dups=0
-		        "spooky128l": inserts=326796, size=1048576, cols=50776, probes=349864, cpi=4.84%, ppi=1.07, dups=0
-		      "spooky128xor": inserts=326796, size=1048576, cols=50906, probes=349734, cpi=4.85%, ppi=1.07, dups=0
-		              "sbox": inserts=326796, size=1048576, cols=50755, probes=349435, cpi=4.84%, ppi=1.07, dups=26
-		             "j332c": inserts=326796, size=1048576, cols=51054, probes=349873, cpi=4.87%, ppi=1.07, dups=9
-		             "j332b": inserts=326796, size=1048576, cols=50564, probes=349852, cpi=4.82%, ppi=1.07, dups=10
-		              "j232": inserts=326796, size=1048576, cols=50577, probes=349523, cpi=4.82%, ppi=1.07, dups=20
-		             "j264l": inserts=326796, size=1048576, cols=50784, probes=349673, cpi=4.84%, ppi=1.07, dups=16
-		             "j264h": inserts=326796, size=1048576, cols=50997, probes=350064, cpi=4.86%, ppi=1.07, dups=19
-		           "j264xor": inserts=326796, size=1048576, cols=50437, probes=349331, cpi=4.81%, ppi=1.07, dups=13
-		          "spooky32": inserts=326796, size=1048576, cols=50673, probes=349547, cpi=4.83%, ppi=1.07, dups=12
-		       "siphash64al": inserts=326796, size=1048576, cols=50794, probes=349621, cpi=4.84%, ppi=1.07, dups=13
-		       "siphash64ah": inserts=326796, size=1048576, cols=51062, probes=349332, cpi=4.87%, ppi=1.07, dups=7
-		       "siphash64bl": inserts=326796, size=1048576, cols=50826, probes=350076, cpi=4.85%, ppi=1.07, dups=21
-		       "siphash64bh": inserts=326796, size=1048576, cols=50763, probes=349610, cpi=4.84%, ppi=1.07, dups=12
-		       "skein256xor": inserts=326796, size=1048576, cols=51001, probes=349511, cpi=4.86%, ppi=1.07, dups=9
-		       "skein256low": inserts=326796, size=1048576, cols=50826, probes=349510, cpi=4.85%, ppi=1.07, dups=15
-		        "skein256hi": inserts=326796, size=1048576, cols=50734, probes=350099, cpi=4.84%, ppi=1.07, dups=13
-		              "sha1": inserts=326796, size=1048576, cols=50976, probes=349704, cpi=4.86%, ppi=1.07, dups=14
-		        "keccak160l": inserts=326796, size=1048576, cols=50998, probes=349799, cpi=4.86%, ppi=1.07, dups=13
-	leb@hula:hashland % hashland -A -hf="all" db/words-vak.txt 
-	file="db/words-vak.txt"
+		         "aeshash64": size=16777216, inserts=6460902, cols=1244858, probes=7238283, cpi=7.42%, ppi=1.12, dups=0, time=7.21s
+		              "j364": size=16777216, inserts=6460902, cols=1243168, probes=7238324, cpi=7.41%, ppi=1.12, dups=0, time=8.33s
+		              "j264": size=16777216, inserts=6460902, cols=1246293, probes=7239983, cpi=7.43%, ppi=1.12, dups=0, time=9.08s
+		         "siphash64": size=16777216, inserts=6460902, cols=1244130, probes=7240076, cpi=7.42%, ppi=1.12, dups=0, time=8.61s
+		        "MaHash8v64": size=16777216, inserts=6460902, cols=1244055, probes=7237949, cpi=7.42%, ppi=1.12, dups=0, time=10.64s
+		          "spooky64": size=16777216, inserts=6460902, cols=1245230, probes=7240621, cpi=7.42%, ppi=1.12, dups=0, time=9.10s
+		        "spooky128h": size=16777216, inserts=6460902, cols=1245230, probes=7240621, cpi=7.42%, ppi=1.12, dups=0, time=9.31s
+		        "spooky128l": size=16777216, inserts=6460902, cols=1244426, probes=7241584, cpi=7.42%, ppi=1.12, dups=0, time=10.03s
+		      "spooky128xor": size=16777216, inserts=6460902, cols=1243033, probes=7240442, cpi=7.41%, ppi=1.12, dups=0, time=9.47s
+		             "j332c": size=16777216, inserts=6460902, cols=1243168, probes=7238324, cpi=7.41%, ppi=1.12, dups=4854, time=9.19s
+		             "j332b": size=16777216, inserts=6460902, cols=1243329, probes=7242425, cpi=7.41%, ppi=1.12, dups=4846, time=9.17s
+		              "j232": size=16777216, inserts=6460902, cols=1245159, probes=7242283, cpi=7.42%, ppi=1.12, dups=4822, time=8.51s
+		             "j264l": size=16777216, inserts=6460902, cols=1246293, probes=7239983, cpi=7.43%, ppi=1.12, dups=4897, time=8.58s
+		             "j264h": size=16777216, inserts=6460902, cols=1243960, probes=7238234, cpi=7.41%, ppi=1.12, dups=4935, time=8.78s
+		           "j264xor": size=16777216, inserts=6460902, cols=1243885, probes=7241105, cpi=7.41%, ppi=1.12, dups=4719, time=9.03s
+		          "spooky32": size=16777216, inserts=6460902, cols=1245230, probes=7240621, cpi=7.42%, ppi=1.12, dups=4880, time=9.46s
+		              "sbox": size=16777216, inserts=6460902, cols=1244814, probes=7240906, cpi=7.42%, ppi=1.12, dups=8695, time=9.46s
+		              "sha1": size=16777216, inserts=6460902, cols=1243120, probes=7237478, cpi=7.41%, ppi=1.12, dups=0, time=13.35s
+		         "keccak643": size=16777216, inserts=6460902, cols=1244489, probes=7241060, cpi=7.42%, ppi=1.12, dups=0, time=28.45s
+		          "skein256": size=16777216, inserts=6460902, cols=1243784, probes=7239653, cpi=7.41%, ppi=1.12, dups=0, time=28.32s
+	leb@hula:~/gotest/src/github.com/tildeleb/hashland % hashland -A db/pagecounts-20140101-000000
+	file="db/pagecounts-20140101-000000", lines=6460902
+	Test0 - ReadFile
+		          "ReadFile": size=16777216, inserts=0, buckets=0, dups=0, q=0.00, time=1.99s
 	TestA - insert keys
-		              "j364": inserts=326796, size=1048576, buckets=280641, dups=0, q=1.00
-		              "j264": inserts=326796, size=1048576, buckets=280818, dups=0, q=1.00
-		       "siphash128a": inserts=326796, size=1048576, buckets=280774, dups=0, q=1.00
-		       "siphash128b": inserts=326796, size=1048576, buckets=280759, dups=0, q=1.00
-		        "MaHash8v64": inserts=326796, size=1048576, buckets=280705, dups=0, q=1.00
-		          "spooky64": inserts=326796, size=1048576, buckets=280983, dups=0, q=1.00
-		        "spooky128h": inserts=326796, size=1048576, buckets=280983, dups=0, q=1.00
-		        "spooky128l": inserts=326796, size=1048576, buckets=280886, dups=0, q=1.00
-		      "spooky128xor": inserts=326796, size=1048576, buckets=280787, dups=0, q=1.00
-		              "sbox": inserts=326796, size=1048576, buckets=280956, dups=26, q=1.00
-		             "j332c": inserts=326796, size=1048576, buckets=280641, dups=9, q=1.00
-		             "j332b": inserts=326796, size=1048576, buckets=281107, dups=10, q=1.00
-		              "j232": inserts=326796, size=1048576, buckets=281053, dups=20, q=1.00
-		             "j264l": inserts=326796, size=1048576, buckets=280818, dups=16, q=1.00
-		             "j264h": inserts=326796, size=1048576, buckets=280703, dups=19, q=1.00
-		           "j264xor": inserts=326796, size=1048576, buckets=281126, dups=13, q=1.00
-		          "spooky32": inserts=326796, size=1048576, buckets=280983, dups=12, q=1.00
-		       "siphash64al": inserts=326796, size=1048576, buckets=280859, dups=13, q=1.00
-		       "siphash64ah": inserts=326796, size=1048576, buckets=280691, dups=7, q=1.00
-		       "siphash64bl": inserts=326796, size=1048576, buckets=280759, dups=21, q=1.00
-		       "siphash64bh": inserts=326796, size=1048576, buckets=280887, dups=12, q=1.00
-		       "skein256xor": inserts=326796, size=1048576, buckets=280616, dups=9, q=1.00
-		       "skein256low": inserts=326796, size=1048576, buckets=280803, dups=15, q=1.00
-		        "skein256hi": inserts=326796, size=1048576, buckets=280949, dups=13, q=1.00
-		              "sha1": inserts=326796, size=1048576, buckets=280710, dups=14, q=1.00
-		        "keccak160l": inserts=326796, size=1048576, buckets=280733, dups=13, q=1.00
+		         "aeshash64": size=16777216, inserts=6460902, buckets=5362095, dups=0, q=1.00, time=7.67s
+		              "j364": size=16777216, inserts=6460902, buckets=5362763, dups=0, q=1.00, time=8.53s
+		              "j264": size=16777216, inserts=6460902, buckets=5360151, dups=0, q=1.00, time=8.26s
+		         "siphash64": size=16777216, inserts=6460902, buckets=5362116, dups=0, q=1.00, time=7.88s
+		        "MaHash8v64": size=16777216, inserts=6460902, buckets=5362919, dups=0, q=1.00, time=9.95s
+		          "spooky64": size=16777216, inserts=6460902, buckets=5361474, dups=0, q=1.00, time=8.79s
+		        "spooky128h": size=16777216, inserts=6460902, buckets=5361474, dups=0, q=1.00, time=9.05s
+		        "spooky128l": size=16777216, inserts=6460902, buckets=5361895, dups=0, q=1.00, time=8.96s
+		      "spooky128xor": size=16777216, inserts=6460902, buckets=5362479, dups=0, q=1.00, time=8.63s
+		             "j332c": size=16777216, inserts=6460902, buckets=5362763, dups=4854, q=1.00, time=8.29s
+		             "j332b": size=16777216, inserts=6460902, buckets=5363075, dups=4846, q=1.00, time=8.48s
+		              "j232": size=16777216, inserts=6460902, buckets=5361330, dups=4822, q=1.00, time=8.46s
+		             "j264l": size=16777216, inserts=6460902, buckets=5360151, dups=4897, q=1.00, time=8.05s
+		             "j264h": size=16777216, inserts=6460902, buckets=5362206, dups=4935, q=1.00, time=8.22s
+		           "j264xor": size=16777216, inserts=6460902, buckets=5362622, dups=4719, q=1.00, time=8.04s
+		          "spooky32": size=16777216, inserts=6460902, buckets=5361474, dups=4880, q=1.00, time=9.10s
+		              "sbox": size=16777216, inserts=6460902, buckets=5361809, dups=8695, q=1.00, time=8.68s
+		              "sha1": size=16777216, inserts=6460902, buckets=5362758, dups=0, q=1.00, time=12.48s
+		         "keccak643": size=16777216, inserts=6460902, buckets=5362212, dups=0, q=1.00, time=25.58s
+		          "skein256": size=16777216, inserts=6460902, buckets=5362896, dups=0, q=1.00, time=28.76s
 	leb@hula:~/gotest/src/github.com/tildeleb/hashland % 
 
 

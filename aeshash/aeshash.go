@@ -13,6 +13,8 @@ var aeskeysched[hashRandomBytes]byte
 
 var aesdebug[hashRandomBytes]byte
 
+func aeshashbody()
+
 //func Hash(p unsafe.Pointer, s, h uintptr) uintptr
 //func HashStr(p string, s, h uintptr) uintptr
 func Hash(b []byte, seed uint64) uint64

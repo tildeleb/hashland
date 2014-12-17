@@ -1,16 +1,16 @@
+// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
 // Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
+// Go's hash function used by map on X64 hardware with AESNI
 // liberated from go runtime/asm_amd64.s
-//
-// hash function using AES hardware instructions
 
 #include "textflag.h"
 #include "funcdata.h"
 
 // func Hash(b []byte, seed uint64) uint64
-TEXT ·Hash(SB),3,$0-40
+TEXT ·Hash(SB),NOSPLIT,$0-40
 	MOVQ	b_base+0(FP), AX	// ptr to bytes
 	MOVQ	b_len+8(FP), CX		// length of slice
 	MOVQ	seed+24(FP), X0		// seed to low 64 bits of xmm0
@@ -19,24 +19,19 @@ TEXT ·Hash(SB),3,$0-40
 	RET
 
 // func HashStr(s string, seed uint64) uint64
-TEXT ·HashStr(SB),3,$0-32
-	MOVQ	s+0(FP), AX			// ptr to string struct
-	MOVQ	(AX), AX			// string bytes
-								// s+8(FP) is ignored, it is always sizeof(String)
-	MOVQ	8(AX), CX			// length of string
+TEXT ·HashStr(SB),NOSPLIT,$0-32
+	MOVQ	s_base+0(FP), AX	// ptr to string data
+	MOVQ	s_len+8(FP), CX		// length of string
 	MOVQ	seed+16(FP), X0		// seed to low 64 bits of xmm0
 	CALL	·aeshashbody(SB)
 	MOVQ	X0, ret+24(FP)
 	RET
 
-//	NO_LOCAL_POINTERS
-//	JMP aesret
-// 3,$0-40
 // AX: data
 // CX: length
 // X0: seed
 // func aeshashbody()
-TEXT ·aeshashbody(SB),0,$0-0
+TEXT ·aeshashbody(SB),NOSPLIT,$0-0
 	PINSRQ	$1, CX, X0		// size to high 64 bits of xmm0
 	MOVO	·aeskeysched+0(SB), X2
 	MOVO	·aeskeysched+16(SB), X3
@@ -92,11 +87,12 @@ finalize:
 aesret:
 	RET
 
+
 // put the seed s into the low 64 bits of xmm0
 // put the data v into the high 64 bits of xmm0
 // perform 3 AES rounds with 2 alternating round keys
 // func Hash64(k uint64, seed uint64) uint64
-TEXT ·Hash64(SB),3,$0-24
+TEXT ·Hash64(SB),NOSPLIT,$0-24
 	MOVQ	seed+8(FP), X0	// seed
 	MOVQ	k+0(FP), AX		// data
 	PINSRQ	$1, AX, X0		// 64 bit data key to high order 64 bits of X0
@@ -107,7 +103,7 @@ TEXT ·Hash64(SB),3,$0-24
 	RET
 
 // func Hash32(k uint32, seed uint64) uint64
-TEXT ·Hash32(SB),3,$0-24
+TEXT ·Hash32(SB),NOSPLIT,$0-24
 	MOVQ	seed+8(FP), X0	// seed
 	MOVQ	k+0(FP), AX		// 32 bit data key
 	PINSRD	$2, AX, X0		// data to the low order 32 bits of the high order 64 bits

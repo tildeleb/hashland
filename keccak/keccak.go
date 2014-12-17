@@ -3,7 +3,7 @@
 package keccak
 
 import (
-	"fmt"
+	_ "fmt"
 	"hash"
 )
 
@@ -50,7 +50,7 @@ func newKeccak(bitlen, rounds int) hash.Hash {
 	h.blockSize = (200 - 2*h.size)
 	h.rounds = rounds
 	if rounds != stdRounds {
-		fmt.Printf("keccak: warning non standard number of rounds %d vs %d\n", rounds, stdRounds)
+		//fmt.Printf("keccak: warning non standard number of rounds %d vs %d\n", rounds, stdRounds)
 	}
 	return &h
 }

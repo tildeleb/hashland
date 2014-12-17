@@ -16,6 +16,7 @@ import (
 	"github.com/tildeleb/hashland/smhasher"
 	"github.com/tildeleb/hashland/nhash"
 	"github.com/tildeleb/hashland/jenkins" // remove
+	"github.com/tildeleb/hashland/aeshash" // remove
 	"sort"
 	"time"
 )
@@ -59,7 +60,21 @@ func ReadFile(file string, cb func(line string)) int {
     }
 }
 
-func TestA(file string, hf2 string) (ht *HashTable) {
+
+func Test0(file string, lines int, hf2 string) (ht *HashTable) {
+	var cnt int
+	var countlines = func(line string) {
+		cnt++
+	}
+	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
+	ReadFile(file, countlines)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
+	return
+}
+
+func TestA(file string, lines int, hf2 string) (ht *HashTable) {
 	//var lines int
 /*
 	var countlines = func(line string) {
@@ -72,66 +87,78 @@ func TestA(file string, hf2 string) (ht *HashTable) {
 
 	//fmt.Printf("\t%20q: ", hf2)
 	//fmt.Printf("run: file=%q\n", file)
-	lines := ReadFile(file, nil)
 	//fmt.Printf("TestA: lines=%d, hf2=%q\n", lines, hf2)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
 	//fmt.Printf("ht=%v\n", ht)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestB(file string, hf2 string) (ht *HashTable) {
+func TestB(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line += "\n"
 		ht.Insert([]byte(line))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestC(file string, hf2 string) (ht *HashTable) {
+func TestC(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line += line + "\n\n\n\n"
 		ht.Insert([]byte(line))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestD(file string, hf2 string) (ht *HashTable) {
+func TestD(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line = "ABCDE" + line
 		ht.Insert([]byte(line))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestE(file string, hf2 string) (ht *HashTable) {
+func TestE(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line = line + line
 		ht.Insert([]byte(line))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestF(file string, hf2 string) (ht *HashTable) {
+func TestF(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line = line + line + line + line
 		ht.Insert([]byte(line))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
@@ -142,19 +169,21 @@ func reverse(s string) string {
 	return reverse(s[1:]) + string(s[0])
 }
 
-func TestG(file string, hf2 string) (ht *HashTable) {
+func TestG(file string, lines int, hf2 string) (ht *HashTable) {
 	var addLine = func(line string) {
 		line2 := reverse(line)
 		//fmt.Printf("line=%q, line2=%q", line, line2)
 		ht.Insert([]byte(line2))
 	}
-	lines := ReadFile(file, nil)
 	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	ReadFile(file, addLine)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestH(file string, hf2 string) (ht *HashTable) {
+func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 	var cnt int
 	var counter = func(word string) {
 		cnt++
@@ -166,28 +195,35 @@ func TestH(file string, hf2 string) (ht *HashTable) {
 
 	genWords(letters, counter)
 	ht = NewHashTable(cnt, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	genWords(letters, addWord)
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestI(file string, hf2 string) (ht *HashTable) {
+func TestI(file string, lines int, hf2 string) (ht *HashTable) {
 	//fmt.Printf("ni=%d\n", *ni)
 	bs := make([]byte, 4, 4)
 	ht = NewHashTable(*ni, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	for i := 0; i < *ni; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 		ht.Insert(bs)
 		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 	}
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
-func TestJ(file string, hf2 string) (ht *HashTable) {
+func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	length := 900
 	keys := length * 8
 	key := make([]byte, length, length)
 	key = key[:]
 	ht = NewHashTable(keys, *extra, *pd, *oa, *prime)
+	start := time.Now()
 	for k := range key {
 		for i := uint(0); i < 8; i++ {
 			key[k] = 1 << i
@@ -196,6 +232,8 @@ func TestJ(file string, hf2 string) (ht *HashTable) {
 			key[k] = 0
 		}
 	}
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
 	return
 }
 
@@ -346,7 +384,8 @@ func benchmark32g(h nhash.HashF32, n int) {
 		for i := 0; i < n; i++ {
 			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 			//_ = jenkins.Hash232(bs, 0)
-			_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+			//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+			_ = aeshash.Hash(bs, 0)
 			//hashes[i] = h
 			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 		}
@@ -387,7 +426,7 @@ func benchmark(hashes []string, n int) {
 type Test struct {
 	name		string
 	flag		**bool
-	ptf			func(file string, hashf string) (ht *HashTable)
+	ptf			func(file string, lines int, hashf string) (ht *HashTable)
 	desc		string
 }
 
@@ -404,10 +443,16 @@ var Tests = []Test{
 	{"TestJ", &J, TestJ, "one bit keys (does not read file)"},
 }
 
-func runTestsWithFileAndHashes(file string, hf []string) {
+func runTestsWithFileAndHashes(file string, lines int, hf []string) {
 	var test Test
 	if file != "" {
-		fmt.Printf("file=%q\n", file)
+		if lines <= 0 {
+			lines = ReadFile(file, nil)
+		}
+		fmt.Printf("file=%q, lines=%d\n", file, lines)
+		fmt.Printf("Test0 - ReadFile\n\t%20q: ", "ReadFile")
+		ht := Test0(file, lines, "")
+		ht.Print()
 	}
 	for _, test = range Tests {
 		if **test.flag {
@@ -424,7 +469,7 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 					continue
 				}
 				fmt.Printf("\t%20q: ", Hf2)
-				ht := test.ptf(file, Hf2)
+				ht := test.ptf(file, lines, Hf2)
 				ht.Print()
 			}
 		}
@@ -436,6 +481,7 @@ func runTestsWithFileAndHashes(file string, hf []string) {
 }
 
 var file = flag.String("file", "", "words to read")
+var lines = flag.Int("lines", 0, "number of lines to read in file")
 var hf = flag.String("hf", "all", "hash function")
 var extra = flag.Int("e", 1, "extra bis in table size")
 var prime = flag.Bool("p", false, "table size is primes and use mod")
@@ -455,6 +501,7 @@ var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmar
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
 var ni = flag.Int("ni", 200000, "number of integer keys")
 var n = flag.Int("n", 100000000, "number of hashes for benchmark")
+var T0 = flag.Bool("0", false, "test 0")
 var A = flag.Bool("A", false, "test A")
 var B = flag.Bool("B", false, "test B")
 var C = flag.Bool("C", false, "test C")
@@ -504,7 +551,8 @@ func main() {
 	// read file and insert
 	// stats
 
-	if  *sm {
+	switch {
+	case *sm:
 		if *hf == "all" {
 			for _, Hf2 = range TestHashFunctions {
 				hi := HashFunctions[Hf2]
@@ -524,35 +572,7 @@ func main() {
 			Hf2 = *hf
 			smhasher.RunSMhasher(Hf2, *v)	
 		}
-	}
-
-	switch {
-	case *file != "":
-		if *hf == "all" {
-			runTestsWithFileAndHashes(*file, TestHashFunctions)
-		} else {
-			Hf2 = *hf
-			runTestsWithFileAndHashes(*file, []string{*hf})
-		}
-	case len(flag.Args()) != 0:
-		for _, v := range flag.Args() {
-			if *hf == "all" {
-				runTestsWithFileAndHashes(v, TestHashFunctions)
-			} else {
-				Hf2 = *hf
-				runTestsWithFileAndHashes(v, []string{*hf})
-			}
-		}
-	case len(flag.Args()) == 0 && !*b:
-		// no files specified run the only two tests we can with the specified hash functions
-		allTestsOff()
-		*I, *J = true, false
-		if *hf == "all" {
-			runTestsWithFileAndHashes("", TestHashFunctions)
-		} else {
-			Hf2 = *hf
-			runTestsWithFileAndHashes("", []string{*hf})
-		}
+		return
 	case *b:
 		//benchmark32s(*n)
 		fmt.Printf("\n")
@@ -574,6 +594,33 @@ func main() {
 		} else {
 			Hf2 = *hf
 			benchmark32g(nil, *n)
+		}
+		return
+	case *file != "":
+		if *hf == "all" {
+			runTestsWithFileAndHashes(*file, *lines, TestHashFunctions)
+		} else {
+			Hf2 = *hf
+			runTestsWithFileAndHashes(*file, *lines, []string{*hf})
+		}
+	case len(flag.Args()) != 0:
+		for _, v := range flag.Args() {
+			if *hf == "all" {
+				runTestsWithFileAndHashes(v, *lines, TestHashFunctions)
+			} else {
+				Hf2 = *hf
+				runTestsWithFileAndHashes(v, *lines, []string{*hf})
+			}
+		}
+	case len(flag.Args()) == 0 && !*b:
+		// no files specified run the only two tests we can with the specified hash functions
+		allTestsOff()
+		*I, *J = true, false
+		if *hf == "all" {
+			runTestsWithFileAndHashes("", *lines, TestHashFunctions)
+		} else {
+			Hf2 = *hf
+			runTestsWithFileAndHashes("", *lines, []string{*hf})
 		}
 	}
 }

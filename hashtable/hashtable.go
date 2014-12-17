@@ -4,6 +4,7 @@ package hashtable
 
 import (
 	"fmt"
+	"time"
 	"github.com/tildeleb/hashland/hashf"
 	"github.com/tildeleb/cuckoo/primes"
 )
@@ -21,6 +22,7 @@ type Stats struct {
 	Nbuckets int
 	Entries int
 	Q float64
+	Dur time.Duration
 	//
 	Lines int
 	Size uint64
@@ -170,6 +172,9 @@ func (ht *HashTable) Insert(ka []byte) {
 
 // The theoretical metric from "Red Dragon Book"
 func (ht *HashTable) HashQuality() float64 {
+	if ht.Inserts == 0 {
+		return 0.0
+	}
 	n := float64(0.0)
 	buckets := 0
 	entries := 0
@@ -192,15 +197,30 @@ func (ht *HashTable) HashQuality() float64 {
 
 
 func (s *HashTable) Print() {
+	var cvt = func(t float64) (ret float64, unit string) {
+		unit = "s"
+		if t < 1.0 {
+			unit = "ms"
+			t *= 1000.0
+			if t < 1.0 {
+				unit = "us"
+				t *= 1000.0
+			}
+		}
+		ret = t
+		return
+	}
+
 	q := s.HashQuality()
+	t, units := cvt(s.Dur.Seconds())
 	if s.oa {
 /*
 		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
 			panic("runTestsWithFileAndHashes")
 		}
 */
-		fmt.Printf("inserts=%d, size=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d\n",
-			s.Inserts, s.Size, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups)
+		fmt.Printf("size=%d, inserts=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, time=%0.2f%s\n",
+			s.Size, s.Inserts, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
 	} else {
 /*
 		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
@@ -208,7 +228,7 @@ func (s *HashTable) Print() {
 			panic("runTestsWithFileAndHashes")
 		}
 */
-		fmt.Printf("inserts=%d, size=%d, buckets=%d, dups=%d, q=%0.2f\n",
-			s.Inserts, s.Size, s.Nbuckets, s.Dups, q)
+		fmt.Printf("size=%d, inserts=%d, buckets=%d, dups=%d, q=%0.2f, time=%0.2f%s\n",
+			s.Size, s.Inserts, s.Nbuckets, s.Dups, q, t, units)
 	}
 }
