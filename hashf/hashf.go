@@ -13,7 +13,7 @@ import (
 	"github.com/tildeleb/hashland/jenkins"
 	"github.com/tildeleb/hashland/mahash"
 	"github.com/tildeleb/hashland/spooky"
-	_ "github.com/tildeleb/hashland/siphashpg"
+	"github.com/tildeleb/hashland/siphashpg"
 	"github.com/tildeleb/hashland/siphash"
 	"github.com/tildeleb/hashland/keccak"
 	"github.com/tildeleb/hashland/skein"
@@ -42,6 +42,7 @@ type HashFunction struct {
 var HashFunctions = map[string]HashFunction{
 	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated"},
 	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated"},
+	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits"},
 /*
 	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits"},
 	"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits"},
@@ -93,6 +94,7 @@ var HashFunctions = map[string]HashFunction{
 // 	"keccak644", "keccak648" "keccak160", 
 var TestHashFunctions = []string{"aeshash64","j364", "j264",
 	"siphash64",
+	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
 	"j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox",
 	"sha1", "keccak643", "skein256",
@@ -117,14 +119,14 @@ var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 // crappy generic adapter that just slows us down
 // will be removed
 func Hashf(k []byte, seed uint64) uint64 {
-/*
+
 	var sipSeedSet = func(seed uint64) {
 		seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7] =
 			byte(seed&0xFF), byte((seed>>8)&0xFF), byte((seed>>16)&0xFF), byte((seed>>24)&0xFF),
 			byte((seed>>32)&0xFF), byte((seed>>40)&0xFF), byte((seed>>48)&0xFF), byte((seed>>56)&0xFF)
 		seeds[8], seeds[9], seeds[10], seeds[11], seeds[12], seeds[13], seeds[14], seeds[15] = seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7]
 	}
-*/
+
 /*
 	_, ok := HashFunctions[Hf2]
 	if !ok {
@@ -192,6 +194,10 @@ func Hashf(k []byte, seed uint64) uint64 {
 	case "siphash64":
 		h := siphash.Hash(0, 0, k)
 		return h
+	case "siphash64pg":
+		sipSeedSet(seed)
+		a, _ := siphashpg.Siphash(k, seeds, siphashpg.Crounds, siphashpg.Drounds, false)
+		return a
 /*
 	case "siphash64":
 		sipSeedSet(seed)
