@@ -19,6 +19,7 @@ import (
 	"github.com/tildeleb/hashland/skein"
 	"github.com/tildeleb/hashland/aeshash"
 	"github.com/tildeleb/hashland/murmur3"
+	"github.com/tildeleb/hashland/gomap"
 
 	//"github.com/tildeleb/hashland/threefish"
 )
@@ -75,6 +76,9 @@ var HashFunctions = map[string]HashFunction{
 	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits"},
 	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox"},
 
+	"gomap32":			HashFunction{"gomap32", 		32,		false,	"gomap32"},
+	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64"},
+
 	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332"},
 	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364"},
 
@@ -100,11 +104,11 @@ var HashFunctions = map[string]HashFunction{
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
 // 	"siphash64", "siphash128a", "siphash128b",
 // 	"keccak644", "keccak648" "keccak160", 
-var TestHashFunctions = []string{"aeshash64","j364", "j264", "murmur364",
+var TestHashFunctions = []string{"aeshash64", "gomap64", "j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
-	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox",
+	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox", "gomap32",
 	"sha1", "keccak643", "skein256",
 }
 
@@ -143,6 +147,12 @@ func Hashf(k []byte, seed uint64) uint64 {
 	}
 */
 	switch Hf2 {
+	case "gomap64":
+		h := gomap.Hash64(k, uint64(seed))
+		return h
+	case "gomap32":
+		h := gomap.Hash32(k, uint32(seed))
+		return uint64(h)
 	case "aeshash64":
 		h := aeshash.Hash(k, seed)
 		return h
