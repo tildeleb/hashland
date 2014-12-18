@@ -18,6 +18,8 @@ import (
 	"github.com/tildeleb/hashland/keccak"
 	"github.com/tildeleb/hashland/skein"
 	"github.com/tildeleb/hashland/aeshash"
+	"github.com/tildeleb/hashland/murmur3"
+
 	//"github.com/tildeleb/hashland/threefish"
 )
 
@@ -28,6 +30,9 @@ var k648 hash.Hash
 var k160 hash.Hash
 var skein256 hash.Hash
 var sha1160 hash.Hash
+var m332 hash.Hash32
+var m364 hash.Hash64
+var m3128 murmur3.Hash128
 
 var Hf2 string // wow this has to go
 
@@ -70,6 +75,9 @@ var HashFunctions = map[string]HashFunction{
 	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits"},
 	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox"},
 
+	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332"},
+	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364"},
+
 	"keccak643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds"},
 	"keccak644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds"},
 	"keccak648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds"},
@@ -92,11 +100,11 @@ var HashFunctions = map[string]HashFunction{
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
 // 	"siphash64", "siphash128a", "siphash128b",
 // 	"keccak644", "keccak648" "keccak160", 
-var TestHashFunctions = []string{"aeshash64","j364", "j264",
+var TestHashFunctions = []string{"aeshash64","j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
-	"j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox",
+	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox",
 	"sha1", "keccak643", "skein256",
 }
 
@@ -191,6 +199,16 @@ func Hashf(k []byte, seed uint64) uint64 {
 	case "spooky128xor":
 		h, l := spooky.Hash128(k, seed)
 		return h ^ l
+	case "murmur332":
+		m332.Reset()
+		m332.Write(k)
+		h := m332.Sum32()
+		return uint64(h)
+	case "murmur364":
+		m364.Reset()
+		m364.Write(k)
+		h := m364.Sum64()
+		return h
 	case "siphash64":
 		h := siphash.Hash(0, 0, k)
 		return h
@@ -323,6 +341,8 @@ func Hashf(k []byte, seed uint64) uint64 {
 }
 
 func init() {
+	m332 = murmur3.New32()
+	m364 = murmur3.New64()
 	k643 = keccak.NewCustom(64, 3)
 	k644 = keccak.NewCustom(64, 4)
 	k648 = keccak.NewCustom(64, 8)

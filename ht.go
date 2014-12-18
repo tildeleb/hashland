@@ -10,6 +10,7 @@ import (
 	"os"
 	"io"
 	"bufio"
+	"math/rand"
 	"github.com/tildeleb/hrff"
 	. "github.com/tildeleb/hashland/hashf" // cleaved
 	. "github.com/tildeleb/hashland/hashtable" // cleaved
@@ -17,6 +18,7 @@ import (
 	"github.com/tildeleb/hashland/nhash"
 	"github.com/tildeleb/hashland/jenkins" // remove
 	"github.com/tildeleb/hashland/aeshash" // remove
+	"github.com/tildeleb/hashland/siphash" // remove
 	"sort"
 	"time"
 )
@@ -237,6 +239,68 @@ func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	return
 }
 
+func unhex(c byte) uint8 {
+        switch {
+        case '0' <= c && c <= '9':
+                return c - '0'
+        case 'a' <= c && c <= 'f':
+                return c - 'a' + 10
+        case 'A' <= c && c <= 'F':
+                return c - 'A' + 10
+        }
+        panic("unhex: bad input")
+}
+
+func hexToBytes(s string) []byte {
+        var data = make([]byte, 1000, 1000)
+        data = data[0:len(s)/2]
+
+        n := len(s)
+        if (n&1) == 1 {
+                panic("gethex: string must be even")
+        }
+        for i := range data {
+                data[i] = unhex(s[2*i])<<4 | unhex(s[2*i+1])
+        }
+        //fmt.Printf("hexToBytes: len(data)=%d, len(s)=%d\n", len(data), len(s))
+        return data[0:len(s)/2]
+}
+
+var r = rand.Float64
+
+func rbetween(a uint64, b uint64) uint64 {
+        rf := r()
+        diff := float64(b - a + 1)
+        r2 := rf * diff
+        r3 := r2 + float64(a)
+        //      fmt.Printf("rbetween: a=%d, b=%d, rf=%f, diff=%f, r2=%f, r3=%f\n", a, b, rf, diff, r2, r3)
+        ret := uint64(r3)
+        return ret
+}
+
+
+func TestK(file string, lines int, hf2 string) (ht *HashTable) {
+	var seed uint64
+	var rseed uint64
+	var b = make([]byte, 1000, 1000)
+	var hashLine = func(line string) {
+		//fmt.Printf("line=%q\n", line)
+		h := Hashf(b, rseed)
+		b := hexToBytes(line)
+		fmt.Printf("\t\tseed=%d, key=%x, hash=0x%x\n", rseed, b, h)
+	}
+	fmt.Printf("\n")
+	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	start := time.Now()
+	for seed = 0; seed < uint64(*ns); seed++ {
+		rseed = rbetween(0, uint64(1)<<63)
+		ReadFile(file, hashLine)	
+	}
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
+	return
+}
+
 // [ABCDEFGH][EFGHIJKL][IJKLMNOP][MNOPQRST][QRSTUVWX][UVWXYZ01]
 // given a slice of strings, generate all the combinations in order
 func genWords(perms []string, f func(word string)) {
@@ -287,50 +351,6 @@ func tdiff(begin, end time.Time) time.Duration {
     return d
 }
 
-var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
-func benchmark32s(n int) {
-	//var hashes = make(Uint32Slice, n)
-	const nbytes = 1024
-	bs := make([]byte, nbytes, nbytes)
-	bs = bs[:]
-	for _, ksiz := range keySizes {
-		if ksiz == 512 {
-			n = n / 10
-		}
-		bs = bs[:ksiz]
-		fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
-		pn := hrff.Int64{int64(n), ""}
-		ps := hrff.Int64{int64(n*ksiz), "B"}
-		fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
-		start := time.Now()
-		for i := 0; i < n; i++ {
-			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			_ = jenkins.Hash232(bs, 0)
-			//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-			//hashes[i] = h
-			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
-		}
-		stop := time.Now()
-		d := tdiff(start, stop)
-		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
-		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
-		fmt.Printf("benchmark32s: %h\n", hsec)
-		fmt.Printf("benchmark32s: %h\n\n", bsec)
-	}
-	return
-
-	fmt.Printf("benchmark32s: sort n=%d\n", n)
-	//hashes.Sort()
-/*
-	for i := 0; i < n; i++ {
-		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
-	}
-*/
-	fmt.Printf("benchmark32s: dup check n=%d\n", n)
-	//dups, mrun := checkForDups32(hashes)
-	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
-}
-
 // IntSlice attaches the methods of Interface to []int, sorting in increasing order.
 type Uint32Slice []uint32
 
@@ -363,8 +383,72 @@ func checkForDups32(u Uint32Slice) (dups, mrun int) {
 	return
 }
 
-func benchmark32g(h nhash.HashF32, n int) {
-	var hashes Uint32Slice
+var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
+func benchmark32s(n int) {
+	//var hashes = make(Uint32Slice, n)
+	const nbytes = 1024
+	bs := make([]byte, nbytes, nbytes)
+	bs = bs[:]
+	for _, ksiz := range keySizes {
+		if ksiz == 512 {
+			n = n / 10
+		}
+		bs = bs[:ksiz]
+		//hashes = make(Uint32Slice, n, n)
+		//hashes = hashes[:]
+		//fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
+		pn := hrff.Int64{int64(n), ""}
+		ps := hrff.Int64{int64(n*ksiz), "B"}
+		//fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
+		start, stop := time.Now(), time.Now()
+		switch ksiz {
+		case 4:
+			start = time.Now()
+			for i := 0; i < n; i++ {
+				bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				//_ = jenkins.Hash232(bs, 0)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				_ = aeshash.Hash(bs, 0)
+				//_ = siphash.Hash(0, 0, bs)
+				//hashes[i] = h
+				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+				//hashes[i] = h
+				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+			}
+			stop = time.Now()
+		default:
+			start = time.Now()
+			for i := 0; i < n; i++ {
+				bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+				_ = aeshash.Hash(bs, 0)
+				//_ = siphash.Hash(0, 0, bs)
+			}
+			stop = time.Now()
+		}
+		d := tdiff(start, stop)
+		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
+		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
+		//fmt.Printf("benchmark32s: %h\n", hsec)
+		//fmt.Printf("benchmark32s: %.2h\n\n", bsec)
+		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %.1h\n", ksiz, pn, ps, hsec, bsec)
+	}
+	return
+
+	fmt.Printf("benchmark32s: sort n=%d\n", n)
+	//hashes.Sort()
+/*
+	for i := 0; i < n; i++ {
+		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+	}
+*/
+	fmt.Printf("benchmark32s: dup check n=%d\n", n)
+	//dups, mrun := checkForDups32(hashes)
+	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
+}
+
+func benchmark32g(h nhash.HashF32, hf2 string, n int) {
+	//var hashes Uint32Slice
 	const nbytes = 1024
 
 	bs := make([]byte, nbytes, nbytes)
@@ -374,18 +458,17 @@ func benchmark32g(h nhash.HashF32, n int) {
 			n = n / 10
 		}
 		bs = bs[:ksiz]
-		hashes = make(Uint32Slice, n, n)
-		hashes = hashes[:]
-		fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
+		//hashes = make(Uint32Slice, n, n)
+		//hashes = hashes[:]
+		//fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
 		pn := hrff.Int64{int64(n), ""}
 		ps := hrff.Int64{int64(n*ksiz), "B"}
-		fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d,  size=%h\n", n, pn, ksiz, ps)
+		//fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
 		start := time.Now()
 		for i := 0; i < n; i++ {
 			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			//_ = jenkins.Hash232(bs, 0)
-			//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-			_ = aeshash.Hash(bs, 0)
+			Hf2 = hf2
+			Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
 			//hashes[i] = h
 			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 		}
@@ -393,34 +476,35 @@ func benchmark32g(h nhash.HashF32, n int) {
 		d := tdiff(start, stop)
 		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
 		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
-		fmt.Printf("benchmark32g: %h\n", hsec)
-		fmt.Printf("benchmark32g: %h\n\n", bsec)
+		//fmt.Printf("benchmark32g: %h\n", hsec)
+		//fmt.Printf("benchmark32g: %.2h\n\n", bsec)
+		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %h\n", ksiz, pn, ps, hsec, bsec)
 	}
 
 	if *cd {
 		fmt.Printf("benchmark32g: sort n=%d\n", n)
-		hashes.Sort()
+		//hashes.Sort()
 	/*
 		for i := 0; i < n; i++ {
 			fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
 		}
 	*/
 		fmt.Printf("benchmark32g: dup check n=%d\n", n)
-		dups, mrun := checkForDups32(hashes)
-		fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
+		//dups, mrun := checkForDups32(hashes)
+		//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
 	}
 }
 
 var benchmarks = []string{"j332c", "j232", "sbox", "CrapWow"}
 //var benchmarks = []string{"j332c"}
 
-func benchmark(hashes []string, n int) {
-	for _, v := range hashes {
-		hf32 := Halloc(v)
-		fmt.Printf("benchmark32g: %q\n", v)
-		benchmark32g(hf32, n)
+func benchmark(hashes []string, hf2 string, n int) {
+	//for _, v := range hashes {
+		//hf32 := Halloc(v)
+		//fmt.Printf("benchmark32g: %q\n", v)
+		benchmark32g(nil, hf2, n)
 		fmt.Printf("\n")
-	}
+	//}
 }
 
 type Test struct {
@@ -441,6 +525,7 @@ var Tests = []Test{
 	{"TestH", &H, TestH, "words from letter combinations in wc"},
 	{"TestI", &I, TestI, "integers from 0 to ni-1 (does not read file)"},
 	{"TestJ", &J, TestJ, "one bit keys (does not read file)"},
+	{"TestK", &K, TestK, "read file of keys and print hashes"},
 }
 
 func runTestsWithFileAndHashes(file string, lines int, hf []string) {
@@ -449,10 +534,12 @@ func runTestsWithFileAndHashes(file string, lines int, hf []string) {
 		if lines <= 0 {
 			lines = ReadFile(file, nil)
 		}
-		fmt.Printf("file=%q, lines=%d\n", file, lines)
-		fmt.Printf("Test0 - ReadFile\n\t%20q: ", "ReadFile")
-		ht := Test0(file, lines, "")
-		ht.Print()
+		//fmt.Printf("file=%q, lines=%d\n", file, lines)
+		if *T0 {
+			fmt.Printf("Test0 - ReadFile\n\t%20q: ", "ReadFile")
+			ht := Test0(file, lines, "")
+			ht.Print()
+		}
 	}
 	for _, test = range Tests {
 		if **test.flag {
@@ -468,15 +555,11 @@ func runTestsWithFileAndHashes(file string, lines int, hf []string) {
 				if *h64 && hi.Size != 64 {
 					continue
 				}
-				fmt.Printf("\t%20q: ", Hf2)
+				fmt.Printf("\t%15q: ", Hf2)
 				ht := test.ptf(file, lines, Hf2)
 				ht.Print()
 			}
 		}
-	}
-	if *b {
-		benchmark32s(*n)
-		benchmark(benchmarks, *n)
 	}
 }
 
@@ -501,6 +584,8 @@ var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmar
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
 var ni = flag.Int("ni", 200000, "number of integer keys")
 var n = flag.Int("n", 100000000, "number of hashes for benchmark")
+var ns = flag.Int("ns", 1, "number of seeds to test")
+
 var T0 = flag.Bool("0", false, "test 0")
 var A = flag.Bool("A", false, "test A")
 var B = flag.Bool("B", false, "test B")
@@ -512,9 +597,10 @@ var G = flag.Bool("G", false, "test G")
 var H = flag.Bool("H", false, "test H")
 var I = flag.Bool("I", false, "test I")
 var J = flag.Bool("J", false, "test J")
+var K = flag.Bool("K", false, "test K")
 
 var letters = []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J}
+var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K}
 
 
 func allTestsOn() {
@@ -574,7 +660,6 @@ func main() {
 		}
 		return
 	case *b:
-		//benchmark32s(*n)
 		fmt.Printf("\n")
 		if *hf == "all" {
 			for _, Hf2 = range TestHashFunctions {
@@ -589,11 +674,12 @@ func main() {
 					continue
 				}
 				fmt.Printf("%q\n", Hf2)
-				benchmark(benchmarks, *n)
+				benchmark(benchmarks, Hf2, *n)
 			}
 		} else {
 			Hf2 = *hf
-			benchmark32g(nil, *n)
+			fmt.Printf("%q\n", Hf2)
+			benchmark32s(*n)
 		}
 		return
 	case *file != "":
@@ -631,4 +717,14 @@ func init() {
 		fmt.Fprintf(os.Stderr, "%s: [flags] [dictionary-files]\n", os.Args[0])
     	flag.PrintDefaults()
 	}
+
+	bs := make([]byte, 4, 4)
+	bs = bs[:]
+	i := 0
+	bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+	_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+	_ = jenkins.Hash232(bs, 0)
+	_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+	_ = aeshash.Hash(bs, 0)
+	_ = siphash.Hash(0, 0, bs)
 }
