@@ -27,7 +27,7 @@ type HashFunction interface {
 	NumSeedBytes() int
 
 	// retunrs the number of bits the hash function outputs
-	HashSizeInBits() int
+	//HashSizeInBits() int
 }
 
 // HashStream is a streaming interface for hash functions.
