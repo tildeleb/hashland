@@ -406,7 +406,7 @@ func benchmark32s(n int) {
 		case 4:
 			start = time.Now()
 			for i := 0; i < n; i++ {
-				bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+				//bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = jenkins.Hash232(bs, 0)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
@@ -421,7 +421,7 @@ func benchmark32s(n int) {
 		default:
 			start = time.Now()
 			for i := 0; i < n; i++ {
-				bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+				//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
 				_ = aeshash.Hash(bs, 0)
 				//_ = siphash.Hash(0, 0, bs)
 			}
