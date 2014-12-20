@@ -384,6 +384,7 @@ func checkForDups32(u Uint32Slice) (dups, mrun int) {
 }
 
 var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
+
 func benchmark32s(n int) {
 	//var hashes = make(Uint32Slice, n)
 	const nbytes = 1024

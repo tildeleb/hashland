@@ -19,7 +19,7 @@ func Hash32(b []byte, seed uint32) uint32 {
 		m4 = 2336365089
 	)
 
-	p := unsafe.Pointer(&b)
+	p := unsafe.Pointer(&b[0])
 	s := len(b)
 	h := uint32(seed + uint32(s))
 tail:

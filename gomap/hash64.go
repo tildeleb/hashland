@@ -18,7 +18,7 @@ func Hash64(b []byte, seed uint64) uint64 {
 		m3 = 9497967016996688599
 		m4 = 15839092249703872147
 	)
-	p := unsafe.Pointer(&b)
+	p := unsafe.Pointer(&b[0])
 	s := len(b)
 	h := uint64(seed + uint64(s))
 tail:
