@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"sort"
 	"time"
+	"hash"
 	"math/rand"
 	"github.com/tildeleb/hrff"
 	. "github.com/tildeleb/hashland/hashf" // cleaved
@@ -415,7 +416,10 @@ func benchmark32s(n int) {
 				//_ = jenkins.Hash232(bs, 0)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = aeshash.Hash(bs, 0)
-				_ =  nhf64.Hash64S(bs, 0)
+				//_ =  nhf64.Hash64S(bs, 0)
+				nh.Reset()
+				nh.Write(bs)
+				_ = nh.Sum64()
 				//_ = siphash.Hash(0, 0, bs)
 				//hashes[i] = h
 				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
@@ -738,6 +742,8 @@ func main() {
 }
 
 var nhf64 nhash.HashF64
+var nh hash.Hash64
+
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -754,5 +760,6 @@ func init() {
 	_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 	_ = aeshash.Hash(bs, 0)
 	_ = siphash.Hash(0, 0, bs)
+	nh = nullhash.New()
 	nhf64 = nullhash.NewF64()
 }
