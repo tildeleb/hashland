@@ -1,4 +1,4 @@
-package keccak
+package keccakpg
 
 // extracted from ShortMsgKAT_{224,256,384,512}.txt
 var tstShort = []testcase{

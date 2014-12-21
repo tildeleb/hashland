@@ -10,17 +10,21 @@ import (
 	"os"
 	"io"
 	"bufio"
+	"sort"
+	"time"
 	"math/rand"
 	"github.com/tildeleb/hrff"
 	. "github.com/tildeleb/hashland/hashf" // cleaved
 	. "github.com/tildeleb/hashland/hashtable" // cleaved
 	"github.com/tildeleb/hashland/smhasher"
 	"github.com/tildeleb/hashland/nhash"
+
+	// remove these at some point
 	"github.com/tildeleb/hashland/jenkins" // remove
 	"github.com/tildeleb/hashland/aeshash" // remove
 	"github.com/tildeleb/hashland/siphash" // remove
-	"sort"
-	"time"
+	"github.com/tildeleb/hashland/nullhash" // remove
+
 )
 
 func ReadFile(file string, cb func(line string)) int {
@@ -410,7 +414,8 @@ func benchmark32s(n int) {
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = jenkins.Hash232(bs, 0)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-				_ = aeshash.Hash(bs, 0)
+				//_ = aeshash.Hash(bs, 0)
+				_ =  nhf64.Hash64S(bs, 0)
 				//_ = siphash.Hash(0, 0, bs)
 				//hashes[i] = h
 				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
@@ -452,6 +457,7 @@ func benchmark32g(h nhash.HashF32, hf2 string, n int) {
 	//var hashes Uint32Slice
 	const nbytes = 1024
 
+	Hf2 = hf2
 	bs := make([]byte, nbytes, nbytes)
 	bs = bs[:]
 	for _, ksiz := range keySizes {
@@ -465,15 +471,25 @@ func benchmark32g(h nhash.HashF32, hf2 string, n int) {
 		pn := hrff.Int64{int64(n), ""}
 		ps := hrff.Int64{int64(n*ksiz), "B"}
 		//fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
-		start := time.Now()
-		for i := 0; i < n; i++ {
-			bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			Hf2 = hf2
-			Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
-			//hashes[i] = h
-			//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+		start, stop := time.Now(), time.Now()
+		switch ksiz {
+		case 4:
+			start = time.Now()
+			for i := 0; i < n; i++ {
+				bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+				Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+			}
+			stop = time.Now()
+		default:
+			start = time.Now()
+			for i := 0; i < n; i++ {
+				bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+				Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+				//hashes[i] = h
+				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+			}
+			stop = time.Now()
 		}
-		stop := time.Now()
 		d := tdiff(start, stop)
 		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
 		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
@@ -578,13 +594,14 @@ var h32 = flag.Bool("h32", false, "only test 32 bit has functions")
 var h64 = flag.Bool("h64", false, "only test 64 bit has functions")
 
 var b = flag.Bool("b", false, "run benchmarks")
+var hcb = flag.Bool("hcb", false, "run hard coded benchmark")
 var sm = flag.Bool("sm", false, "run SMHasher")
 var v = flag.Bool("v", false, "verbose")
 var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmarks")
 
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
 var ni = flag.Int("ni", 200000, "number of integer keys")
-var n = flag.Int("n", 100000000, "number of hashes for benchmark")
+var n = flag.Int("n", 10000000, "number of hashes for benchmark")
 var ns = flag.Int("ns", 1, "number of seeds to test")
 
 var T0 = flag.Bool("0", false, "test 0")
@@ -630,6 +647,9 @@ func main() {
 	flag.Parse()
 	if *all {
 		allTestsOn()
+	}
+	if *hcb {
+		*b = true
 	}
 	//fmt.Printf("%d lines read\n", lines)
 
@@ -678,9 +698,14 @@ func main() {
 				benchmark(benchmarks, Hf2, *n)
 			}
 		} else {
-			Hf2 = *hf
-			fmt.Printf("%q\n", Hf2)
-			benchmark32s(*n)
+			if *hcb {	// this benchmark is hard coded
+				fmt.Printf("%q\n", "hardcoded benchmark")
+				benchmark32s(*n)
+			} else {
+				Hf2 = *hf
+				fmt.Printf("%q\n", Hf2)
+				benchmark32g(nil, *hf, *n)
+			}
 		}
 		return
 	case *file != "":
@@ -712,6 +737,7 @@ func main() {
 	}
 }
 
+var nhf64 nhash.HashF64
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -728,4 +754,5 @@ func init() {
 	_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 	_ = aeshash.Hash(bs, 0)
 	_ = siphash.Hash(0, 0, bs)
+	nhf64 = nullhash.NewF64()
 }

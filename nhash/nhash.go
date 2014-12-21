@@ -68,6 +68,7 @@ type HashF32 interface {
 type HashF64 interface {
 	HashFunction
 	Hash64(b []byte, seeds ...uint64) uint64
+	Hash64S(b []byte, seed uint64) uint64
 }
 
 // HashF128 is the interface that all non-streaming 128 bit hash functions implement.

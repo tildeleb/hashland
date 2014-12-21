@@ -15,20 +15,25 @@ import (
 	"github.com/tildeleb/hashland/spooky"
 	"github.com/tildeleb/hashland/siphashpg"
 	"github.com/tildeleb/hashland/siphash"
+	"github.com/tildeleb/hashland/keccakpg"
 	"github.com/tildeleb/hashland/keccak"
 	"github.com/tildeleb/hashland/skein"
 	"github.com/tildeleb/hashland/aeshash"
 	"github.com/tildeleb/hashland/murmur3"
 	"github.com/tildeleb/hashland/gomap"
+	"github.com/tildeleb/hashland/nullhash"
 
 	//"github.com/tildeleb/hashland/threefish"
 )
 
+var nh hash.Hash64
+var nhf64 nhash.HashF64
 var a32 hash.Hash32
 var k643 hash.Hash
 var k644 hash.Hash
 var k648 hash.Hash
 var k160 hash.Hash
+var k224 hash.Hash
 var skein256 hash.Hash
 var sha1160 hash.Hash
 var m332 hash.Hash32
@@ -46,6 +51,8 @@ type HashFunction struct {
 
 
 var HashFunctions = map[string]HashFunction{
+	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit"},
+	"nullhashF64ns":	HashFunction{"nullhashF64ns", 	64,		true,	"nullhashF64ns, 64 bit, no seed"},
 	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated"},
 	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated"},
 	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits"},
@@ -82,9 +89,10 @@ var HashFunctions = map[string]HashFunction{
 	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332"},
 	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364"},
 
-	"keccak643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds"},
-	"keccak644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds"},
-	"keccak648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds"},
+	"keccak224":		HashFunction{"keccak224", 		64,		true,	"keccak, 224 bit to 64 bit"},
+	"keccakpg643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds"},
+	"keccakpg644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds"},
+	"keccakpg648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds"},
 	"skein256":			HashFunction{"skein256", 		64,		true,	"skein256, 64 bit , low 64 bits"},
 	"sha1":				HashFunction{"sha1", 			64,		true,	"sha1, 160 bit hash, 64 bit, low 64 bits"},
 	"keccak160":		HashFunction{"keccak160", 		64,		true,	"keccak160l"},
@@ -104,12 +112,13 @@ var HashFunctions = map[string]HashFunction{
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
 // 	"siphash64", "siphash128a", "siphash128b",
 // 	"keccak644", "keccak648" "keccak160", 
-var TestHashFunctions = []string{"aeshash64", "gomap64", "j364", "j264", "murmur364",
+var TestHashFunctions = []string{"nullhash",
+	"aeshash64", "gomap64", "j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
 	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox", "gomap32",
-	"sha1", "keccak643", "skein256",
+	"sha1", "keccakpg643", "keccak224", "skein256",
 }
 
 
@@ -126,6 +135,11 @@ func Halloc(hfs string) (hf32 nhash.HashF32) {
 	}
 	return
 }
+
+var fp8 = make([]byte, 8, 8)
+var fp20 = make([]byte, 20, 20)
+var fp28 = make([]byte, 28, 28)
+var fp32 = make([]byte, 32, 32)
 
 var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 // crappy generic adapter that just slows us down
@@ -147,6 +161,14 @@ func Hashf(k []byte, seed uint64) uint64 {
 	}
 */
 	switch Hf2 {
+	case "nullhash":
+		nh.Reset()
+		nh.Write(k)
+		h := nh.Sum64()
+		return h
+	case "nullhashF64ns":
+		h := nhf64.Hash64(k)
+		return h
 	case "gomap64":
 		h := gomap.Hash64(k, uint64(seed))
 		return h
@@ -256,15 +278,24 @@ func Hashf(k []byte, seed uint64) uint64 {
 		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
 		return uint64((b>>32)&0xFFFFFFFF)
 */
-	case "keccak643":
-		fp := make([]byte, 8, 8)
-		fp = fp[0:0]
+	case "keccak224":
+		fp28 = fp28[0:0]
+		k224.Reset()
+		//fmt.Printf("len(k)=%d\n", k)
+		k224.Write(k)
+		fp28 = k224.Sum(fp28) // crashes 		fp8 = k224.Sum(fp28)
+		//fmt.Printf("len(k)=%d, k=%#X, fp=%#x\n", len(k), k, fp28)
+		//fmt.Printf("len(fp28)=%d\n", fp28)
+		//fmt.Printf("keccak160xor: fp=%v\n", fp)
+		return uint64(fp28[0])<<56 | uint64(fp28[1])<<48 | uint64(fp28[2])<<40 | uint64(fp28[3])<<32 | uint64(fp28[4])<<24 | uint64(fp28[5])<<16 | uint64(fp28[6])<<8  | uint64(fp28[7])<<0 
+	case "keccakpg643":
+		fp8 = fp8[0:0]
 		k643.Reset()
 		k643.Write(k)
-		fp = k643.Sum(fp)
+		fp8 = k643.Sum(fp8)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
-	case "keccak644":
+		return uint64(fp8[0])<<56 | uint64(fp8[1])<<48 | uint64(fp8[2])<<40 | uint64(fp8[3])<<32 | uint64(fp8[4])<<24 | uint64(fp8[5])<<16 | uint64(fp8[6])<<8  | uint64(fp8[7])<<0 
+	case "keccakpg644":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
 		k644.Reset()
@@ -272,7 +303,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		fp = k644.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
-	case "keccak648":
+	case "keccakpg648":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
 		k648.Reset()
@@ -280,7 +311,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		fp = k648.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
-	case "keccak160":
+	case "keccakpg160":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
 		k160.Reset()
@@ -329,19 +360,20 @@ func Hashf(k []byte, seed uint64) uint64 {
 		//fmt.Printf("skein256: fp=%v\n", fp)
     	return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
 	case "sha1":
-		fp := make([]byte, 32)
-		fp = fp[0:0]
+		//fp := make([]byte, 20)
+		//fp = fp[0:0]
 		sha1160.Reset()
 		sha1160.Write(k)
-		fp = sha1160.Sum(fp)
+		fp20 = fp20[0:0]
+		fp20 = sha1160.Sum(fp20)
 		if false {
-	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
-	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
-	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
-	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
+	        low := fp20[0] ^ fp20[4] ^ fp20[8] ^ fp20[12] ^ fp20[16]
+	        med := fp20[1] ^ fp20[5] ^ fp20[9] ^ fp20[13] ^ fp20[17]
+	        hii := fp20[2] ^ fp20[6] ^ fp20[10] ^ fp20[14] ^ fp20[18]
+	        top := fp20[3] ^ fp20[7] ^ fp20[11] ^ fp20[15] ^ fp20[19]
         	return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
+			return uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 | uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
 		}
 	default:
 		fmt.Printf("hf=%q\n", Hf2)
@@ -351,12 +383,15 @@ func Hashf(k []byte, seed uint64) uint64 {
 }
 
 func init() {
+	nh = nullhash.New()
+	nhf64 = nullhash.NewF64()
 	m332 = murmur3.New32()
 	m364 = murmur3.New64()
-	k643 = keccak.NewCustom(64, 3)
-	k644 = keccak.NewCustom(64, 4)
-	k648 = keccak.NewCustom(64, 8)
-	k160 = keccak.New160()
+	k643 = keccakpg.NewCustom(64, 3)
+	k644 = keccakpg.NewCustom(64, 4)
+	k648 = keccakpg.NewCustom(64, 8)
+	k160 = keccakpg.New160()
+	k224 = keccak.New224()
 	skein256 = skein.New256()
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()

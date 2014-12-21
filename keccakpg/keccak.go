@@ -1,6 +1,6 @@
 // Package keccak implements the Keccak (SHA-3) hash algorithm.
 // http://keccak.noekeon.org.
-package keccak
+package keccakpg
 
 import (
 	_ "fmt"
@@ -137,6 +137,10 @@ func (k *keccak) BlockSize() int {
 	return k.blockSize
 }
 
+func rotl64(x uint64, n uint) uint64 {
+	return (x << n) | (x >> (64 - n))
+}
+
 func (k *keccak) f(block []byte) {
 
 	if len(block) != k.blockSize {
@@ -194,10 +198,6 @@ func (k *keccak) pad(block []byte) []byte {
 	padded[len(padded)-1] |= 0x80
 
 	return padded
-}
-
-func rotl64(x uint64, n uint) uint64 {
-	return (x << n) | (x >> (64 - n))
 }
 
 func uint64le(v []byte) uint64 {
