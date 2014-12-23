@@ -11,7 +11,7 @@ import "log"
 import "runtime/pprof"
 //import "math/rand"
 //import "runtime"
-import "github.com/tildeleb/hashes/jenkins"
+import "github.com/tildeleb/hashland/jenkins"
 import "github.com/tildeleb/hrff"
 
 func stu(s string) []uint32 {
@@ -297,7 +297,6 @@ func main() {
 	//return
 	benchmark32(*n)
 	benchmark64(int64(*n))
-	return
 
 	q := "This is the time for all good men to come to the aid of their country..."
 	//qq := []byte{"xThis is the time for all good men to come to the aid of their country..."}

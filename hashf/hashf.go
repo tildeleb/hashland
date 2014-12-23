@@ -47,63 +47,64 @@ type HashFunction struct {
 	Size		int // in bits
 	Crypto		bool
 	desc		string
+	hf			hash.Hash64
 }
 
 
 var HashFunctions = map[string]HashFunction{
-	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit"},
-	"nullhashF64ns":	HashFunction{"nullhashF64ns", 	64,		true,	"nullhashF64ns, 64 bit, no seed"},
-	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated"},
-	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated"},
-	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits"},
+	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit", nil},
+	"nullhashF64ns":	HashFunction{"nullhashF64ns", 	64,		true,	"nullhashF64ns, 64 bit, no seed", nil},
+	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated", nil},
+	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated", nil},
+	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits", nil},
 /*
-	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits"},
-	"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits"},
-	"siphash128b":		HashFunction{"siphashb", 		64,		true,	"siphash, 128 bit, b bits"},
-	"siphash64al":		HashFunction{"siphash64al", 	32,		true,	"siphash, 64 bit, a bits, low"},
-	"siphash64ah":		HashFunction{"siphash64ah", 	32,		true,	"siphash, 64 bit, a bits, high"},
-	"siphash64bl":		HashFunction{"siphash64bl", 	32,		true,	"siphash, 128 bit, b bits, low"},
-	"siphash64bh":		HashFunction{"siphash64bh", 	32,		true,	"siphash, 128 bit, b bits, high"},
+	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits", nil},
+	"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits", nil},
+	"siphash128b":		HashFunction{"siphashb", 		64,		true,	"siphash, 128 bit, b bits", nil},
+	"siphash64al":		HashFunction{"siphash64al", 	32,		true,	"siphash, 64 bit, a bits, low", nil},
+	"siphash64ah":		HashFunction{"siphash64ah", 	32,		true,	"siphash, 64 bit, a bits, high", nil},
+	"siphash64bl":		HashFunction{"siphash64bl", 	32,		true,	"siphash, 128 bit, b bits, low", nil},
+	"siphash64bh":		HashFunction{"siphash64bh", 	32,		true,	"siphash, 128 bit, b bits, high", nil},
 */
-	"MaHash8v64":		HashFunction{"MaHash8v64", 		64,		false,	"russian hash function"},
+	"MaHash8v64":		HashFunction{"MaHash8v64", 		64,		false,	"russian hash function", nil},
 
 	// tribute to Robert Jenkins goes here
-	"spooky32":			HashFunction{"spooky32", 		32,		false,	"jenkins, spooky, 32 bit"},
-	"spooky64":			HashFunction{"spooky64", 		64,		false,	"jenkins, spooky, 64 bit"},
-	"spooky128h":		HashFunction{"spooky128h", 		64,		false,	"jenkins, spooky, 128 bit, high bits"},
-	"spooky128l":		HashFunction{"spooky128l", 		64,		false,	"jenkins, spooky, 128 bit, low bits"},
-	"spooky128xor":		HashFunction{"spooky128xor",	64,		false,	"jenkins, spooky, 128, high xor low bits"},
-	"j364":				HashFunction{"j364", 			64,		false,	"jenkins, lookup3. 64 bit, c low order bits, b high order bits"},
-	"j264":				HashFunction{"j264", 			64,		false,	"jenkins, lookup8. 64 bit"},
-	"j332c":			HashFunction{"j332c", 			32,		false,	"jenkins, lookup3, 32 bit, c bits"},
-	"j332b":			HashFunction{"j332b", 			32,		false,	"jenkins, lookup3, 32 bit, b bits"},
-	"j232":				HashFunction{"j232", 			32,		false,	"jenkins, lookup8, 32 bit"},
-	"j264l":			HashFunction{"j264l", 			32,		false,	"jenkins, lookup8, 64 bit, low bits"},
-	"j264h":			HashFunction{"j264h", 			32,		false,	"jenkins, lookup8, 64 bit, high bits"},
-	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits"},
-	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox"},
+	"spooky32":			HashFunction{"spooky32", 		32,		false,	"jenkins, spooky, 32 bit", nil},
+	"spooky64":			HashFunction{"spooky64", 		64,		false,	"jenkins, spooky, 64 bit", nil},
+	"spooky128h":		HashFunction{"spooky128h", 		64,		false,	"jenkins, spooky, 128 bit, high bits", nil},
+	"spooky128l":		HashFunction{"spooky128l", 		64,		false,	"jenkins, spooky, 128 bit, low bits", nil},
+	"spooky128xor":		HashFunction{"spooky128xor",	64,		false,	"jenkins, spooky, 128, high xor low bits", nil},
+	"j364":				HashFunction{"j364", 			64,		false,	"jenkins, lookup3. 64 bit, c low order bits, b high order bits", nil},
+	"j264":				HashFunction{"j264", 			64,		false,	"jenkins, lookup8. 64 bit", nil},
+	"j332c":			HashFunction{"j332c", 			32,		false,	"jenkins, lookup3, 32 bit, c bits", nil},
+	"j332b":			HashFunction{"j332b", 			32,		false,	"jenkins, lookup3, 32 bit, b bits", nil},
+	"j232":				HashFunction{"j232", 			32,		false,	"jenkins, lookup8, 32 bit", nil},
+	"j264l":			HashFunction{"j264l", 			32,		false,	"jenkins, lookup8, 64 bit, low bits", nil},
+	"j264h":			HashFunction{"j264h", 			32,		false,	"jenkins, lookup8, 64 bit, high bits", nil},
+	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits", nil},
+	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox", nil},
 
-	"gomap32":			HashFunction{"gomap32", 		32,		false,	"gomap32"},
-	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64"},
+	"gomap32":			HashFunction{"gomap32", 		32,		false,	"gomap32", nil},
+	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64", nil},
 
-	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332"},
-	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364"},
+	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332", nil},
+	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364", nil},
 
-	"keccak224":		HashFunction{"keccak224", 		64,		true,	"keccak, 224 bit to 64 bit"},
-	"keccakpg643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds"},
-	"keccakpg644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds"},
-	"keccakpg648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds"},
-	"skein256":			HashFunction{"skein256", 		64,		true,	"skein256, 64 bit , low 64 bits"},
-	"sha1":				HashFunction{"sha1", 			64,		true,	"sha1, 160 bit hash, 64 bit, low 64 bits"},
-	"keccak160":		HashFunction{"keccak160", 		64,		true,	"keccak160l"},
+	"keccak224":		HashFunction{"keccak224", 		64,		true,	"keccak, 224 bit to 64 bit", nil},
+	"keccakpg643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds", nil},
+	"keccakpg644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds", nil},
+	"keccakpg648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds", nil},
+	"skein256":			HashFunction{"skein256", 		64,		true,	"skein256, 64 bit , low 64 bits", nil},
+	"sha1":				HashFunction{"sha1", 			64,		true,	"sha1, 160 bit hash, 64 bit, low 64 bits", nil},
+	"keccak160":		HashFunction{"keccak160", 		64,		true,	"keccak160l", nil},
 
-	"skein256low":		HashFunction{"skein256low", 	32,		true,	"skein256low"},
-	"skein256hi":		HashFunction{"skein256hi", 		32,		true,	"skein256hi"},
-	"skein256xor":		HashFunction{"skein256xor", 	32,		true,	"skein256xor"},
+	"skein256low":		HashFunction{"skein256low", 	32,		true,	"skein256low", nil},
+	"skein256hi":		HashFunction{"skein256hi", 		32,		true,	"skein256hi", nil},
+	"skein256xor":		HashFunction{"skein256xor", 	32,		true,	"skein256xor", nil},
 
 
-	"CrapWow":			HashFunction{"CrapWow", 		32,		false,	"CrapWow"},
-	"adler32":			HashFunction{"adler32", 		32,		false,	"adler32"},
+	"CrapWow":			HashFunction{"CrapWow", 		32,		false,	"CrapWow", nil},
+	"adler32":			HashFunction{"adler32", 		32,		false,	"adler32", nil},
 }
 
 // "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
@@ -144,15 +145,26 @@ var fp32 = make([]byte, 32, 32)
 var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 // crappy generic adapter that just slows us down
 // will be removed
+var sipSeedSet = func(seed uint64) {
+	seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7] =
+		byte(seed&0xFF), byte((seed>>8)&0xFF), byte((seed>>16)&0xFF), byte((seed>>24)&0xFF),
+		byte((seed>>32)&0xFF), byte((seed>>40)&0xFF), byte((seed>>48)&0xFF), byte((seed>>56)&0xFF)
+	seeds[8], seeds[9], seeds[10], seeds[11], seeds[12], seeds[13], seeds[14], seeds[15] = seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7]
+}
+
+var dis int = 0
+
+/*
 func Hashf(k []byte, seed uint64) uint64 {
-
-	var sipSeedSet = func(seed uint64) {
-		seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7] =
-			byte(seed&0xFF), byte((seed>>8)&0xFF), byte((seed>>16)&0xFF), byte((seed>>24)&0xFF),
-			byte((seed>>32)&0xFF), byte((seed>>40)&0xFF), byte((seed>>48)&0xFF), byte((seed>>56)&0xFF)
-		seeds[8], seeds[9], seeds[10], seeds[11], seeds[12], seeds[13], seeds[14], seeds[15] = seeds[0], seeds[1], seeds[2], seeds[3], seeds[4], seeds[5], seeds[6], seeds[7]
+	if dis == 0 {
+		h := aeshash.Hash(k, seed)
+		return h
 	}
+	return 0
+}
+*/
 
+func Hashf(k []byte, seed uint64) uint64 {
 /*
 	_, ok := HashFunctions[Hf2]
 	if !ok {
@@ -167,7 +179,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		h := nh.Sum64()
 		return h
 	case "nullhashF64ns":
-		h := nhf64.Hash64(k)
+		h := nhf64.Hash64S(k, 0)
 		return h
 	case "gomap64":
 		h := gomap.Hash64(k, uint64(seed))
@@ -396,4 +408,5 @@ func init() {
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()
 	a32 = adler32.New()
+	//HashFunctions["keccak224"].hf = k224
 }

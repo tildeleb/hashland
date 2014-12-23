@@ -220,7 +220,7 @@ func (s *HashTable) Print() {
 		}
 */
 		fmt.Printf("size=%d, inserts=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, time=%0.2f%s\n",
-			s.Size, s.Inserts, s.Cols, s.Probes, float64(s.Cols)/float64(s.Size)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
+			s.Size, s.Inserts, s.Cols, s.Probes, float64(s.Cols)/float64(s.Inserts)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
 	} else {
 /*
 		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {

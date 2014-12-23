@@ -615,6 +615,7 @@ func XHashWords(k []uint32, length int, seed uint32) uint32 {
 func Jenkins364(k []byte, length int, pc, pb uint32) (rpc, rpb uint32) {
 	var a, b, c uint32
 
+	//fmt.Printf("Jenkins364: k=%v, len(k)=%d\n", k, len(k))
 	if length == 0 {
 		length = len(k)
 	}
@@ -642,7 +643,6 @@ func Jenkins364(k []byte, length int, pc, pb uint32) (rpc, rpb uint32) {
 	}
 */
 	ul := uint32(len(k))
-	//fmt.Printf("s=%q, k=%v, len(s)=%d, len(k)=%d\n", s, k, len(s), len(k))
 
 	/* Set up the internal state */
 	a = 0xdeadbeef + ul + pc

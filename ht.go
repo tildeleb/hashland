@@ -25,7 +25,9 @@ import (
 	"github.com/tildeleb/hashland/aeshash" // remove
 	"github.com/tildeleb/hashland/siphash" // remove
 	"github.com/tildeleb/hashland/nullhash" // remove
-
+	"github.com/tildeleb/hashland/gomap" // remove
+	"github.com/tildeleb/hashland/keccak" // remove
+	"github.com/tildeleb/hashland/keccakpg" // remove
 )
 
 func ReadFile(file string, cb func(line string)) int {
@@ -390,11 +392,14 @@ func checkForDups32(u Uint32Slice) (dups, mrun int) {
 
 var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
 
+// WARNING: The benchmark run here is hardcoded (in two places)
+// You must recompile to change the benchmark
 func benchmark32s(n int) {
 	//var hashes = make(Uint32Slice, n)
 	const nbytes = 1024
 	bs := make([]byte, nbytes, nbytes)
 	bs = bs[:]
+	Hf2 = "nullhash"
 	for _, ksiz := range keySizes {
 		if ksiz == 512 {
 			n = n / 10
@@ -406,20 +411,29 @@ func benchmark32s(n int) {
 		pn := hrff.Int64{int64(n), ""}
 		ps := hrff.Int64{int64(n*ksiz), "B"}
 		//fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
+		if false {
+			_ = gomap.Hash64(bs, 0)
+			_ = aeshash.Hash(bs, 0)
+		}
 		start, stop := time.Now(), time.Now()
 		switch ksiz {
 		case 4:
 			start = time.Now()
 			for i := 0; i < n; i++ {
+				_ = aeshash.Hash(bs, 0)
+				//k224.Reset()
+				//k224.Write(bs)
+				//_ = k224.Sum(nil)
 				//bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = jenkins.Hash232(bs, 0)
 				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-				//_ = aeshash.Hash(bs, 0)
-				//_ =  nhf64.Hash64S(bs, 0)
-				nh.Reset()
-				nh.Write(bs)
-				_ = nh.Sum64()
+				//_ = gomap.Hash64(bs, 0)
+				//_ =  nhf64.Hash64S(bs, 0) // chnage below too
+				//nh.Reset()
+				//nh.Write(bs)
+				//_ = nh.Sum64()
+				//Hashf(bs, 0)
 				//_ = siphash.Hash(0, 0, bs)
 				//hashes[i] = h
 				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
@@ -430,9 +444,20 @@ func benchmark32s(n int) {
 		default:
 			start = time.Now()
 			for i := 0; i < n; i++ {
-				//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
 				_ = aeshash.Hash(bs, 0)
+				//k224.Reset()
+				//k224.Write(bs)
+				//_ = k224.Sum(nil)
+				//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				//_ = aeshash.Hash(bs, 0)
+				//_ = gomap.Hash64(bs, 0)
 				//_ = siphash.Hash(0, 0, bs)
+				//_ =  nhf64.Hash64S(bs, 0)
+				//nh.Reset()
+				//nh.Write(bs)
+				//_ = nh.Sum64()
+				//Hashf(bs, 0)
 			}
 			stop = time.Now()
 		}
@@ -441,7 +466,7 @@ func benchmark32s(n int) {
 		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
 		//fmt.Printf("benchmark32s: %h\n", hsec)
 		//fmt.Printf("benchmark32s: %.2h\n\n", bsec)
-		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %.1h\n", ksiz, pn, ps, hsec, bsec)
+		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %.1h, time=%v\n", ksiz, pn, ps, hsec, bsec, d)
 	}
 	return
 
@@ -457,7 +482,7 @@ func benchmark32s(n int) {
 	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
 }
 
-func benchmark32g(h nhash.HashF32, hf2 string, n int) {
+func benchmark32g(h hash.Hash64, hf2 string, n int) {
 	//var hashes Uint32Slice
 	const nbytes = 1024
 
@@ -476,30 +501,55 @@ func benchmark32g(h nhash.HashF32, hf2 string, n int) {
 		ps := hrff.Int64{int64(n*ksiz), "B"}
 		//fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
 		start, stop := time.Now(), time.Now()
-		switch ksiz {
-		case 4:
-			start = time.Now()
-			for i := 0; i < n; i++ {
-				bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-				Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+		if h != nil {
+			switch ksiz {
+			case 4:
+				start = time.Now()
+				for i := 0; i < n; i++ {
+					bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+					h.Reset()
+					h.Write(bs)
+					_ = h.Sum64()
+				}
+				stop = time.Now()
+			default:
+				start = time.Now()
+				for i := 0; i < n; i++ {
+					bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+					h.Reset()
+					h.Write(bs)
+					_ = h.Sum64()
+					//hashes[i] = h
+					//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+				}
+				stop = time.Now()
 			}
-			stop = time.Now()
-		default:
-			start = time.Now()
-			for i := 0; i < n; i++ {
-				bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
-				Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
-				//hashes[i] = h
-				//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+		} else {
+			switch ksiz {
+			case 4:
+				start = time.Now()
+				for i := 0; i < n; i++ {
+					//bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+					Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+				}
+				stop = time.Now()
+			default:
+				start = time.Now()
+				for i := 0; i < n; i++ {
+					//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
+					Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+					//hashes[i] = h
+					//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+				}
+				stop = time.Now()
 			}
-			stop = time.Now()
 		}
 		d := tdiff(start, stop)
 		hsec := hrff.Float64{(float64(n) / d.Seconds()), "hashes/sec"}
 		bsec := hrff.Float64{(float64(n) * float64(ksiz) / d.Seconds()), "B/sec"}
 		//fmt.Printf("benchmark32g: %h\n", hsec)
 		//fmt.Printf("benchmark32g: %.2h\n\n", bsec)
-		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %h\n", ksiz, pn, ps, hsec, bsec)
+		fmt.Printf("\tksize=%d, n=%h, size=%h, %h, %.1h, time=%v\n", ksiz, pn, ps, hsec, bsec, d)
 	}
 
 	if *cd {
@@ -743,6 +793,8 @@ func main() {
 
 var nhf64 nhash.HashF64
 var nh hash.Hash64
+var k224 hash.Hash
+var k643 hash.Hash
 
 func init() {
 	flag.Usage = func() {
@@ -762,4 +814,6 @@ func init() {
 	_ = siphash.Hash(0, 0, bs)
 	nh = nullhash.New()
 	nhf64 = nullhash.NewF64()
+	k224 = keccak.New224()
+	k643 = keccakpg.NewCustom(64, 3)
 }

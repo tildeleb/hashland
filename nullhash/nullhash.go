@@ -10,6 +10,7 @@ func nullhash(b []byte, seed uint64) uint64 {
 }
 
 type nullhashstate struct {
+	ctr uint64
 }
 
 func (n *nullhashstate) Size() int {
@@ -36,18 +37,21 @@ func (n *nullhashstate) Sum(b []byte) []byte {
 }
 
 func (n *nullhashstate) Sum64() uint64 {
-	return uint64(0)
+	n.ctr++
+	return n.ctr
 }
 
 func (n *nullhashstate) Reset() {
 }
 
-func  (d *nullhashstate) Hash64(b []byte, seeds ...uint64) uint64 {
-	return 0
+func  (n *nullhashstate) Hash64(b []byte, seeds ...uint64) uint64 {
+	n.ctr++
+	return n.ctr
 }
 
-func  (d *nullhashstate) Hash64S(b []byte, seed uint64) uint64 {
-	return 0
+func  (n *nullhashstate) Hash64S(b []byte, seed uint64) uint64 {
+	n.ctr++
+	return n.ctr
 }
 
 func New() hash.Hash64 {
