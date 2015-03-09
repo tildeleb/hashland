@@ -5,6 +5,8 @@ package hashf
 import (
 	"fmt"
 	"hash"
+	"time"
+	"unsafe"
 	"hash/adler32"
 	"crypto/sha1"
 	"github.com/tildeleb/hashland/nhash"
@@ -26,6 +28,7 @@ import (
 	//"github.com/tildeleb/hashland/threefish"
 )
 
+// interfaces
 var nh hash.Hash64
 var nhf64 nhash.HashF64
 var a32 hash.Hash32
@@ -40,21 +43,53 @@ var m332 hash.Hash32
 var m364 hash.Hash64
 var m3128 murmur3.Hash128
 
+// functions
+var j264 = jenkins.Hash264
+var j364 = jenkins.Jenkins364
+var null = nullhashf
+var aesg = aeshash.Hash
+
+
 var Hf2 string // wow this has to go
+type ff func() time.Duration
+
+
+func nullhashf(b []byte, seed uint64) uint64 {
+	return 0
+}
+
+type DispEntry struct {
+	fp		unsafe.Pointer
+	hi 		hash.Hash
+	hi32	hash.Hash32
+	hi64	hash.Hash64
+	kind	int
+}
+
+const (
+	h64s = 2
+	b32s = iota
+	b32x2sx2 = iota
+)
 
 type HashFunction struct {
 	Name		string
 	Size		int // in bits
 	Crypto		bool
 	desc		string
-	hf			hash.Hash64
+	de			*DispEntry
+//	dummy		*int		// de			DispEntry
 }
 
+var nullhashfp = nullhash.Nullhash
+var fnull = nullhashf
+var faes = aeshash.Hash
+var fgomap = gomap.Hash64
 
 var HashFunctions = map[string]HashFunction{
-	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit", nil},
+	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit", &DispEntry{fp: unsafe.Pointer(&fnull), kind: h64s},},
 	"nullhashF64ns":	HashFunction{"nullhashF64ns", 	64,		true,	"nullhashF64ns, 64 bit, no seed", nil},
-	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated", nil},
+	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated", &DispEntry{fp: unsafe.Pointer(&faes), kind: h64s},},
 	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated", nil},
 	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits", nil},
 /*
@@ -85,7 +120,7 @@ var HashFunctions = map[string]HashFunction{
 	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox", nil},
 
 	"gomap32":			HashFunction{"gomap32", 		32,		false,	"gomap32", nil},
-	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64", nil},
+	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64", &DispEntry{fp: unsafe.Pointer(&fgomap), kind: h64s},},
 
 	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332", nil},
 	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364", nil},
@@ -122,6 +157,29 @@ var TestHashFunctions = []string{"nullhash",
 	"sha1", "keccakpg643", "keccak224", "skein256",
 }
 
+type hf32 func(b []byte, seed uint32) uint32
+type hf322 func(b []byte, l int, seeda, seedb uint32) (uint32, uint32)
+type hf64 func(b []byte, seed uint64) uint64
+type hf128e func(b []byte, seeda, seedb uint64) (uint64, uint64)
+
+func hashspatch(de *DispEntry, b []byte, seed uint64) (ret uint64) {
+	if de.kind == 2 {
+		//pf := (*hf64)(de.fp)
+		ret = (*(*hf64)(de.fp))(b, seed)
+	} else if de.kind == 3 {
+		pf := (*hf322)(de.fp)
+		c, b  := (*pf)(b, len(b), uint32(seed), uint32(seed>>32))
+		ret = uint64(b)<<32 | uint64(c)
+	} else if de.kind == 4 {
+		//fmt.Printf("len(b)=%d\n", len(b))
+		de.hi64.Reset()
+		de.hi64.Write(b)
+		ret = de.hi64.Sum64()
+	} else {
+		panic("hash")
+	}
+	return
+}
 
 func Halloc(hfs string) (hf32 nhash.HashF32) {
 	switch hfs {

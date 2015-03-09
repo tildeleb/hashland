@@ -168,6 +168,7 @@ func Hash232(k []byte, seed uint32) uint32 {
    return c
 }
 
+// original mix function
 func mix64(a, b, c uint64) (uint64, uint64, uint64) {
 	a=a-b;  a=a-c;  a=a^(c>>43);
 	b=b-c;  b=b-a;  b=b^(a<<9);
@@ -184,56 +185,57 @@ func mix64(a, b, c uint64) (uint64, uint64, uint64) {
 	return a, b, c
 }
 
-
-func mix64aa(a, b, c uint64) (uint64, uint64, uint64) {
-	a = a - b - c ^ (c>>43)
-	b = b - c - a ^ (a<<9)
-	c = c - a - b ^ (b>>8)
-	a = a - b - c ^ (c>>38)
-	b = b - c - a ^ (a<<23)
-	c = c - a - b ^ (b>>5)
-	a = a - b - c ^ (c>>35)
-	b = b - c - a ^ (a<<49)
-	c = c - a - b ^ (b>>11)
-	a = a - b - c ^ (c>>12)
-	b = b - c - a ^ (a<<18)
-	c = c - a - b ^ (b>>22)
+// restated mix function better for gofmt
+func mix64alt(a, b, c uint64) (uint64, uint64, uint64) {
+	a -= b - c ^ (c>>43)
+	b -= c - a ^ (a<<9)
+	c -= a - b ^ (b>>8)
+	a -= b - c ^ (c>>38)
+	b -= c - a ^ (a<<23)
+	c -= a - b ^ (b>>5)
+	a -= b - c ^ (c>>35)
+	b -= c - a ^ (a<<49)
+	c -= a - b ^ (b>>11)
+	a -= b - c ^ (c>>12)
+	b -= c - a ^ (a<<18)
+	c -= a - b ^ (b>>22)
 	return a, b, c
 }
 
+// the following functions can be inlined
 func mix64a(a, b, c uint64) (uint64, uint64, uint64) {
-	a = a - b - c ^ (c>>43)
-	b = b - c - a ^ (a<<9)
+	a -= b - c ^ (c>>43)
+	b -= c - a ^ (a<<9)
 	return a, b, c
 }
 
 func mix64b(a, b, c uint64) (uint64, uint64, uint64) {
-	c = c - a - b ^ (b>>8)
-	a = a - b - c ^ (c>>38)
+	c -= a - b ^ (b>>8)
+	a -= b - c ^ (c>>38)
 	return a, b, c
 }
 
 func mix64c(a, b, c uint64) (uint64, uint64, uint64) {
-	b = b - c - a ^ (a<<23)
-	c = c - a - b ^ (b>>5)
+	b -= c - a ^ (a<<23)
+	c -= a - b ^ (b>>5)
 	return a, b, c
 }
 
 func mix64d(a, b, c uint64) (uint64, uint64, uint64) {
-	a = a - b - c ^ (c>>35)
-	b = b - c - a ^ (a<<49)
+	a -= b - c ^ (c>>35)
+	b -= c - a ^ (a<<49)
 	return a, b, c
 }
 
 func mix64e(a, b, c uint64) (uint64, uint64, uint64) {
-	c = c - a - b ^ (b>>11)
-	a = a - b - c ^ (c>>12)
+	c -= a - b ^ (b>>11)
+	a -= b - c ^ (c>>12)
 	return a, b, c
 }
 
 func mix64f(a, b, c uint64) (uint64, uint64, uint64) {
-	b = b - c - a ^ (a<<18)
-	c = c - a - b ^ (b>>22)
+	b -= c - a ^ (a<<18)
+	c -= a - b ^ (b>>22)
 	return a, b, c
 }
 
@@ -283,7 +285,7 @@ func Hash264(k []byte, seed uint64) uint64 {
 			a += uint64(k[0]) | uint64(k[1]) << 8 | uint64(k[2]) << 16 | uint64(k[3]) << 24 | uint64(k[4]) << 32 | uint64(k[5]) << 40 | uint64(k[6]) << 48 | uint64(k[7]) << 56
 			b += uint64(k[8]) | uint64(k[9]) << 8 | uint64(k[10]) << 16 | uint64(k[11]) << 24 | uint64(k[12]) << 32 | uint64(k[13]) << 40 | uint64(k[14]) << 48 | uint64(k[15]) << 56
 			c += uint64(k[16]) | uint64(k[17]) << 8 | uint64(k[18]) << 16 | uint64(k[19]) << 24 | uint64(k[20]) << 32 | uint64(k[21]) << 40 | uint64(k[22]) << 48 | uint64(k[23]) << 56
-			a, b, c = mix64aa(a, b, c)
+			a, b, c = mix64alt(a, b, c)
 			k = k[24:]
 			length -= 24
 		}
@@ -366,7 +368,7 @@ func Hash264(k []byte, seed uint64) uint64 {
 	default:
 		panic("HashWords64")
 	}
-	a, b, c = mix64aa(a, b, c)
+	a, b, c = mix64alt(a, b, c)
 	return c
 }
 

@@ -14,7 +14,8 @@ import (
 	"time"
 	"hash"
 	"math/rand"
-	"github.com/tildeleb/hrff"
+	"crypto/sha1"
+	"leb.io/hrff"
 	. "github.com/tildeleb/hashland/hashf" // cleaved
 	. "github.com/tildeleb/hashland/hashtable" // cleaved
 	"github.com/tildeleb/hashland/smhasher"
@@ -390,15 +391,16 @@ func checkForDups32(u Uint32Slice) (dups, mrun int) {
 	return
 }
 
-var keySizes = []int{4, 8, 16, 32, 64, 512, 1024}
+var keySizes = []int{4, 8, 16, 32, 64, 512, 1024, 4096}
 
 // WARNING: The benchmark run here is hardcoded (in two places)
 // You must recompile to change the benchmark
 func benchmark32s(n int) {
 	//var hashes = make(Uint32Slice, n)
-	const nbytes = 1024
+	const nbytes = 16384 // fix
 	bs := make([]byte, nbytes, nbytes)
 	bs = bs[:]
+	//fp20 := make([]byte, 20, 20)
 	Hf2 = "nullhash"
 	for _, ksiz := range keySizes {
 		if ksiz == 512 {
@@ -421,6 +423,12 @@ func benchmark32s(n int) {
 			start = time.Now()
 			for i := 0; i < n; i++ {
 				_ = aeshash.Hash(bs, 0)
+				// sha1160.Reset()
+				// sha1160.Write(bs)
+				// fp20 = fp20[0:0]
+				// fp20 = sha1160.Sum(fp20)
+				// _ = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 |
+				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
 				//k224.Reset()
 				//k224.Write(bs)
 				//_ = k224.Sum(nil)
@@ -444,6 +452,12 @@ func benchmark32s(n int) {
 		default:
 			start = time.Now()
 			for i := 0; i < n; i++ {
+				// sha1160.Reset()
+				// sha1160.Write(bs)
+				// fp20 = fp20[0:0]
+				// fp20 = sha1160.Sum(fp20)
+				// _ = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 |
+				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
 				_ = aeshash.Hash(bs, 0)
 				//k224.Reset()
 				//k224.Write(bs)
@@ -484,7 +498,7 @@ func benchmark32s(n int) {
 
 func benchmark32g(h hash.Hash64, hf2 string, n int) {
 	//var hashes Uint32Slice
-	const nbytes = 1024
+	const nbytes = 16384 // fix
 
 	Hf2 = hf2
 	bs := make([]byte, nbytes, nbytes)
@@ -795,6 +809,7 @@ var nhf64 nhash.HashF64
 var nh hash.Hash64
 var k224 hash.Hash
 var k643 hash.Hash
+var sha1160 hash.Hash
 
 func init() {
 	flag.Usage = func() {
@@ -816,4 +831,5 @@ func init() {
 	nhf64 = nullhash.NewF64()
 	k224 = keccak.New224()
 	k643 = keccakpg.NewCustom(64, 3)
+	sha1160 = sha1.New()
 }

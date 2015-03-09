@@ -5,7 +5,7 @@ import (
 	"github.com/tildeleb/hashland/nhash"
 	)
 
-func nullhash(b []byte, seed uint64) uint64 {
+func Nullhash(b []byte, seed uint64) uint64 {
 	return 0
 }
 
