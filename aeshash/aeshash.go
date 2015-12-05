@@ -1,6 +1,7 @@
 package aeshash
 
 import _ "unsafe"
+import "github.com/tildeleb/hashland/nhash"
 
 var masks [32]uint64
 var shifts [32]uint64
@@ -38,3 +39,85 @@ func init() {
 	p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15] = 0xFD, 0, 0, 0, 0, 0, 0, 0xFC
 }
 
+// Make sure interfaces are correctly implemented. Stolen from another implementation.
+// I did something similar in another package to verify the interface but didn't know you could elide the variable in a var.
+// What a cute wart it is.
+var (
+	//_ hash.Hash   = new(Digest)
+	_ nhash.Hash64 = new(StateAES)
+	_  nhash.HashStream = new(StateAES)
+)
+
+type StateAES struct {
+	hash	uint64
+	seed	uint64
+	clen	int
+	tail	[]byte
+}
+
+func NewAES(seed uint64) nhash.Hash64 {
+	s := new(StateAES)
+	s.seed = seed
+	s.Reset()
+	return s
+}
+
+// Return the size of the resulting hash.
+func (d *StateAES) Size() int { return 8 }
+
+// Return the blocksize of the hash which in this case is 1 byte.
+func (d *StateAES) BlockSize() int { return 1 }
+
+// Return the maximum number of seed bypes required. In this case 2 x 32
+func (d *StateAES) NumSeedBytes() int {
+	return 8
+}
+
+// Return the number of bits the hash function outputs.
+func (d *StateAES) HashSizeInBits() int {
+	return 64
+}
+
+// Reset the hash state.
+func (d *StateAES) Reset() {
+	d.hash = 0
+	d.clen = 0
+	d.tail = nil
+}
+
+// Accept a byte stream p used for calculating the hash. For now this call is lazy and the actual hash calculations take place in Sum() and Sum32().
+func (d *StateAES) Write(p []byte) (nn int, err error) {
+	l := len(p)
+	d.clen += l
+	d.tail = append(d.tail, p...)
+	return l, nil
+}
+
+func (d *StateAES) Write64(h uint64) (err error) {
+	d.clen += 8
+	d.tail = append(d.tail, byte(h>>56), byte(h>>48), byte(h>>40), byte(h>>32), byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
+	return nil
+}
+
+// Return the current hash as a byte slice.
+func (d *StateAES) Sum(b []byte) []byte {
+	d.hash = Hash(d.tail, d.seed)
+	h := d.hash
+	return append(b, byte(h>>56), byte(h>>48), byte(h>>40), byte(h>>32), byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
+}
+
+// Return the current hash as a 64 bit unsigned type.
+func (d *StateAES) Sum64() uint64 {
+	d.hash = Hash(d.tail, d.seed)
+	return d.hash
+}
+
+func (d *StateAES) Hash64(b []byte, seeds ...uint64) uint64 {
+	switch len(seeds) {
+	case 1:
+		d.seed = seeds[0]
+	}
+	d.hash = Hash(b, d.seed)
+	//fmt.Printf("pc=0x%08x, pb=0x%08x\n", d.pc, d.pb)
+	return d.hash
+}

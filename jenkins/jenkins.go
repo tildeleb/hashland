@@ -883,7 +883,8 @@ func (d *State332c) Hash32(b []byte, seeds ...uint32) uint32 {
 
 // ----
 
-func New364(seed uint64) nhash.HashF64 {
+// changed this from HashF64 to Hash64 to get streaming functions, what did I break? 7-22-15
+func New364(seed uint64) nhash.Hash64 {
 	s := new(State364)
 	s.seed = seed
 	s.Reset()
@@ -930,10 +931,16 @@ func (d *State364) Sum(b []byte) []byte {
 	return append(b, byte(h>>56), byte(h>>48), byte(h>>40), byte(h>>32), byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
 }
 
+func (d *State364) Write64(h uint64) (err error) {
+	d.clen += 8
+	d.tail = append(d.tail, byte(h>>56), byte(h>>48), byte(h>>40), byte(h>>32), byte(h>>24), byte(h>>16), byte(h>>8), byte(h))
+	return nil
+}
+
 // Return the current hash as a 64 bit unsigned type.
 func (d *State364) Sum64() uint64 {
 	d.pc, d.pb = Jenkins364(d.tail, len(d.tail), d.pc, d.pb)
-	d.hash = uint64(d.pb<<32) | uint64(d.pc)
+	d.hash = uint64(d.pb)<<32 | uint64(d.pc)
 	return d.hash
 }
 

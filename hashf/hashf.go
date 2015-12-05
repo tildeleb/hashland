@@ -3,27 +3,28 @@
 package hashf
 
 import (
+	"crypto/sha1"
 	"fmt"
+	metro "github.com/dgryski/go-metro"
+	"github.com/tildeleb/hashland/aeshash"
+	"github.com/tildeleb/hashland/crapwow"
+	"github.com/tildeleb/hashland/gomap"
+	"github.com/tildeleb/hashland/jenkins"
+	"github.com/tildeleb/hashland/keccak"
+	"github.com/tildeleb/hashland/keccakpg"
+	"github.com/tildeleb/hashland/mahash"
+	"github.com/tildeleb/hashland/murmur3"
+	"github.com/tildeleb/hashland/nhash"
+	"github.com/tildeleb/hashland/nullhash"
+	"github.com/tildeleb/hashland/sbox"
+	"github.com/tildeleb/hashland/siphash"
+	"github.com/tildeleb/hashland/siphashpg"
+	"github.com/tildeleb/hashland/skein"
+	"github.com/tildeleb/hashland/spooky"
 	"hash"
+	"hash/adler32"
 	"time"
 	"unsafe"
-	"hash/adler32"
-	"crypto/sha1"
-	"github.com/tildeleb/hashland/nhash"
-	"github.com/tildeleb/hashland/sbox"
-	"github.com/tildeleb/hashland/crapwow"
-	"github.com/tildeleb/hashland/jenkins"
-	"github.com/tildeleb/hashland/mahash"
-	"github.com/tildeleb/hashland/spooky"
-	"github.com/tildeleb/hashland/siphashpg"
-	"github.com/tildeleb/hashland/siphash"
-	"github.com/tildeleb/hashland/keccakpg"
-	"github.com/tildeleb/hashland/keccak"
-	"github.com/tildeleb/hashland/skein"
-	"github.com/tildeleb/hashland/aeshash"
-	"github.com/tildeleb/hashland/murmur3"
-	"github.com/tildeleb/hashland/gomap"
-	"github.com/tildeleb/hashland/nullhash"
 
 	//"github.com/tildeleb/hashland/threefish"
 )
@@ -49,36 +50,34 @@ var j364 = jenkins.Jenkins364
 var null = nullhashf
 var aesg = aeshash.Hash
 
-
 var Hf2 string // wow this has to go
 type ff func() time.Duration
-
 
 func nullhashf(b []byte, seed uint64) uint64 {
 	return 0
 }
 
 type DispEntry struct {
-	fp		unsafe.Pointer
-	hi 		hash.Hash
-	hi32	hash.Hash32
-	hi64	hash.Hash64
-	kind	int
+	fp   unsafe.Pointer
+	hi   hash.Hash
+	hi32 hash.Hash32
+	hi64 hash.Hash64
+	kind int
 }
 
 const (
-	h64s = 2
-	b32s = iota
+	h64s     = 2
+	b32s     = iota
 	b32x2sx2 = iota
 )
 
 type HashFunction struct {
-	Name		string
-	Size		int // in bits
-	Crypto		bool
-	desc		string
-	de			*DispEntry
-//	dummy		*int		// de			DispEntry
+	Name   string
+	Size   int // in bits
+	Crypto bool
+	desc   string
+	de     *DispEntry
+	//	dummy		*int		// de			DispEntry
 }
 
 var nullhashfp = nullhash.Nullhash
@@ -87,73 +86,80 @@ var faes = aeshash.Hash
 var fgomap = gomap.Hash64
 
 var HashFunctions = map[string]HashFunction{
-	"nullhash":			HashFunction{"nullhash", 		64,		true,	"nullhash, 64 bit", &DispEntry{fp: unsafe.Pointer(&fnull), kind: h64s},},
-	"nullhashF64ns":	HashFunction{"nullhashF64ns", 	64,		true,	"nullhashF64ns, 64 bit, no seed", nil},
-	"aeshash64":		HashFunction{"aeshash64", 		64,		true,	"aeshash, 64 bit, accelerated", &DispEntry{fp: unsafe.Pointer(&faes), kind: h64s},},
-	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, accelerated", nil},
-	"siphash64pg":		HashFunction{"siphash64pg", 	64,		true,	"siphash, pure go, 64 bit, a bits", nil},
-/*
-	"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits", nil},
-	"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits", nil},
-	"siphash128b":		HashFunction{"siphashb", 		64,		true,	"siphash, 128 bit, b bits", nil},
-	"siphash64al":		HashFunction{"siphash64al", 	32,		true,	"siphash, 64 bit, a bits, low", nil},
-	"siphash64ah":		HashFunction{"siphash64ah", 	32,		true,	"siphash, 64 bit, a bits, high", nil},
-	"siphash64bl":		HashFunction{"siphash64bl", 	32,		true,	"siphash, 128 bit, b bits, low", nil},
-	"siphash64bh":		HashFunction{"siphash64bh", 	32,		true,	"siphash, 128 bit, b bits, high", nil},
-*/
-	"MaHash8v64":		HashFunction{"MaHash8v64", 		64,		false,	"russian hash function", nil},
+	"nullhash":      HashFunction{"nullhash", 64, true, "nullhash, 64 bit", &DispEntry{fp: unsafe.Pointer(&fnull), kind: h64s}},
+	"nullhashF64ns": HashFunction{"nullhashF64ns", 64, true, "nullhashF64ns, 64 bit, no seed", nil},
+	"aeshash64":     HashFunction{"aeshash64", 64, true, "aeshash, 64 bit, accelerated", &DispEntry{fp: unsafe.Pointer(&faes), kind: h64s}},
+	"siphash64":     HashFunction{"siphash64", 64, true, "siphash, 64 bit, accelerated", nil},
+	"siphash64pg":   HashFunction{"siphash64pg", 64, true, "siphash, pure go, 64 bit, a bits", nil},
+	/*
+		"siphash64":		HashFunction{"siphash64", 		64,		true,	"siphash, 64 bit, a bits", nil},
+		"siphash128a":		HashFunction{"siphasha", 		64,		true,	"siphash, 128 bit, a bits", nil},
+		"siphash128b":		HashFunction{"siphashb", 		64,		true,	"siphash, 128 bit, b bits", nil},
+		"siphash64al":		HashFunction{"siphash64al", 	32,		true,	"siphash, 64 bit, a bits, low", nil},
+		"siphash64ah":		HashFunction{"siphash64ah", 	32,		true,	"siphash, 64 bit, a bits, high", nil},
+		"siphash64bl":		HashFunction{"siphash64bl", 	32,		true,	"siphash, 128 bit, b bits, low", nil},
+		"siphash64bh":		HashFunction{"siphash64bh", 	32,		true,	"siphash, 128 bit, b bits, high", nil},
+	*/
+	"MaHash8v64": HashFunction{"MaHash8v64", 64, false, "russian hash function", nil},
 
 	// tribute to Robert Jenkins goes here
-	"spooky32":			HashFunction{"spooky32", 		32,		false,	"jenkins, spooky, 32 bit", nil},
-	"spooky64":			HashFunction{"spooky64", 		64,		false,	"jenkins, spooky, 64 bit", nil},
-	"spooky128h":		HashFunction{"spooky128h", 		64,		false,	"jenkins, spooky, 128 bit, high bits", nil},
-	"spooky128l":		HashFunction{"spooky128l", 		64,		false,	"jenkins, spooky, 128 bit, low bits", nil},
-	"spooky128xor":		HashFunction{"spooky128xor",	64,		false,	"jenkins, spooky, 128, high xor low bits", nil},
-	"j364":				HashFunction{"j364", 			64,		false,	"jenkins, lookup3. 64 bit, c low order bits, b high order bits", nil},
-	"j264":				HashFunction{"j264", 			64,		false,	"jenkins, lookup8. 64 bit", nil},
-	"j332c":			HashFunction{"j332c", 			32,		false,	"jenkins, lookup3, 32 bit, c bits", nil},
-	"j332b":			HashFunction{"j332b", 			32,		false,	"jenkins, lookup3, 32 bit, b bits", nil},
-	"j232":				HashFunction{"j232", 			32,		false,	"jenkins, lookup8, 32 bit", nil},
-	"j264l":			HashFunction{"j264l", 			32,		false,	"jenkins, lookup8, 64 bit, low bits", nil},
-	"j264h":			HashFunction{"j264h", 			32,		false,	"jenkins, lookup8, 64 bit, high bits", nil},
-	"j264xor":			HashFunction{"j264xor",			32,		false,	"jenkins, lookup8, 64 bit, high xor low bits", nil},
-	"sbox":				HashFunction{"sbox", 			32,		false,	"sbox", nil},
+	"spooky32":     HashFunction{"spooky32", 32, false, "jenkins, spooky, 32 bit", nil},
+	"spooky64":     HashFunction{"spooky64", 64, false, "jenkins, spooky, 64 bit", nil},
+	"spooky128h":   HashFunction{"spooky128h", 64, false, "jenkins, spooky, 128 bit, high bits", nil},
+	"spooky128l":   HashFunction{"spooky128l", 64, false, "jenkins, spooky, 128 bit, low bits", nil},
+	"spooky128xor": HashFunction{"spooky128xor", 64, false, "jenkins, spooky, 128, high xor low bits", nil},
+	"j364":         HashFunction{"j364", 64, false, "jenkins, lookup3. 64 bit, c low order bits, b high order bits", nil},
+	"j264":         HashFunction{"j264", 64, false, "jenkins, lookup8. 64 bit", nil},
+	"j332c":        HashFunction{"j332c", 32, false, "jenkins, lookup3, 32 bit, c bits", nil},
+	"j332b":        HashFunction{"j332b", 32, false, "jenkins, lookup3, 32 bit, b bits", nil},
+	"j232":         HashFunction{"j232", 32, false, "jenkins, lookup8, 32 bit", nil},
+	"j264l":        HashFunction{"j264l", 32, false, "jenkins, lookup8, 64 bit, low bits", nil},
+	"j264h":        HashFunction{"j264h", 32, false, "jenkins, lookup8, 64 bit, high bits", nil},
+	"j264xor":      HashFunction{"j264xor", 32, false, "jenkins, lookup8, 64 bit, high xor low bits", nil},
+	"sbox":         HashFunction{"sbox", 32, false, "sbox", nil},
 
-	"gomap32":			HashFunction{"gomap32", 		32,		false,	"gomap32", nil},
-	"gomap64":			HashFunction{"gomap64", 		64,		false,	"gomap64", &DispEntry{fp: unsafe.Pointer(&fgomap), kind: h64s},},
+	"gomap32": HashFunction{"gomap32", 32, false, "gomap32", nil},
+	"gomap64": HashFunction{"gomap64", 64, false, "gomap64", &DispEntry{fp: unsafe.Pointer(&fgomap), kind: h64s}},
 
-	"murmur332":		HashFunction{"murmur332", 		32,		false,	"murmur332", nil},
-	"murmur364":		HashFunction{"murmur364", 		64,		false,	"murmur364", nil},
+	"murmur332": HashFunction{"murmur332", 32, false, "murmur332", nil},
+	"murmur364": HashFunction{"murmur364", 64, false, "murmur364", nil},
 
-	"keccak224":		HashFunction{"keccak224", 		64,		true,	"keccak, 224 bit to 64 bit", nil},
-	"keccakpg643":		HashFunction{"keccak643", 		64,		true,	"keccak, 64 bit, 3 rounds", nil},
-	"keccakpg644":		HashFunction{"keccak644", 		64,		true,	"keccak, 64 bit, 4 rounds", nil},
-	"keccakpg648":		HashFunction{"keccak648", 		64,		true,	"keccak, 64 bit, 8 rounds", nil},
-	"skein256":			HashFunction{"skein256", 		64,		true,	"skein256, 64 bit , low 64 bits", nil},
-	"sha1":				HashFunction{"sha1", 			64,		true,	"sha1, 160 bit hash, 64 bit, low 64 bits", nil},
-	"keccak160":		HashFunction{"keccak160", 		64,		true,	"keccak160l", nil},
+	"MetroHash64-1":  HashFunction{"MetroHash64-1", 64, false, "MetroHash64-1", nil},
+	"MetroHash64-2":  HashFunction{"MetroHash64-2", 64, false, "MetroHash64-2", nil},
+	"MetroHash128-1": HashFunction{"MetroHash128-1", 128, false, "MetroHash128-1", nil},
+	"MetroHash128-2": HashFunction{"MetroHash128-2", 64, false, "MetroHash128-2", nil},
 
-	"skein256low":		HashFunction{"skein256low", 	32,		true,	"skein256low", nil},
-	"skein256hi":		HashFunction{"skein256hi", 		32,		true,	"skein256hi", nil},
-	"skein256xor":		HashFunction{"skein256xor", 	32,		true,	"skein256xor", nil},
+	"keccak224":   HashFunction{"keccak224", 64, true, "keccak, 224 bit to 64 bit", nil},
+	"keccakpg643": HashFunction{"keccak643", 64, true, "keccak, 64 bit, 3 rounds", nil},
+	"keccakpg644": HashFunction{"keccak644", 64, true, "keccak, 64 bit, 4 rounds", nil},
+	"keccakpg648": HashFunction{"keccak648", 64, true, "keccak, 64 bit, 8 rounds", nil},
+	"skein256":    HashFunction{"skein256", 64, true, "skein256, 64 bit , low 64 bits", nil},
+	"sha1":        HashFunction{"sha1", 64, true, "sha1, 160 bit hash", nil},
+	"keccak160":   HashFunction{"keccak160", 64, true, "keccak160l", nil},
 
+	"skein256low": HashFunction{"skein256low", 32, true, "skein256low", nil},
+	"skein256hi":  HashFunction{"skein256hi", 32, true, "skein256hi", nil},
+	"skein256xor": HashFunction{"skein256xor", 32, true, "skein256xor", nil},
 
-	"CrapWow":			HashFunction{"CrapWow", 		32,		false,	"CrapWow", nil},
-	"adler32":			HashFunction{"adler32", 		32,		false,	"adler32", nil},
+	"CrapWow": HashFunction{"CrapWow", 32, false, "CrapWow", nil},
+	"adler32": HashFunction{"adler32", 32, false, "adler32", nil},
 }
 
 // "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
 // "adler32" removed for the same reasons
 // 	"siphash64al", "siphash64ah", "siphash64bl", "siphash64bh",
-// 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l", 
+// 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l",
 // 	"siphash64", "siphash128a", "siphash128b",
-// 	"keccak644", "keccak648" "keccak160", 
+// 	"keccak644", "keccak648" "keccak160",
 var TestHashFunctions = []string{"nullhash",
 	"aeshash64", "gomap64", "j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
-	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32",  "sbox", "gomap32",
+	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "sbox", "gomap32",
+	"MetroHash64-1", "MetroHash64-2",
+	"MetroHash128-1l", "MetroHash128-1h", "MetroHash128-1xor",
+	"MetroHash128-2l", "MetroHash128-2h", "MetroHash128-2xor",
 	"sha1", "keccakpg643", "keccak224", "skein256",
 }
 
@@ -168,7 +174,7 @@ func hashspatch(de *DispEntry, b []byte, seed uint64) (ret uint64) {
 		ret = (*(*hf64)(de.fp))(b, seed)
 	} else if de.kind == 3 {
 		pf := (*hf322)(de.fp)
-		c, b  := (*pf)(b, len(b), uint32(seed), uint32(seed>>32))
+		c, b := (*pf)(b, len(b), uint32(seed), uint32(seed>>32))
 		ret = uint64(b)<<32 | uint64(c)
 	} else if de.kind == 4 {
 		//fmt.Printf("len(b)=%d\n", len(b))
@@ -201,6 +207,7 @@ var fp28 = make([]byte, 28, 28)
 var fp32 = make([]byte, 32, 32)
 
 var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+
 // crappy generic adapter that just slows us down
 // will be removed
 var sipSeedSet = func(seed uint64) {
@@ -223,13 +230,13 @@ func Hashf(k []byte, seed uint64) uint64 {
 */
 
 func Hashf(k []byte, seed uint64) uint64 {
-/*
-	_, ok := HashFunctions[Hf2]
-	if !ok {
-		fmt.Printf("%q not found\n", Hf2)
-		panic("hashf")
-	}
-*/
+	/*
+		_, ok := HashFunctions[Hf2]
+		if !ok {
+			fmt.Printf("%q not found\n", Hf2)
+			panic("hashf")
+		}
+	*/
 	switch Hf2 {
 	case "nullhash":
 		nh.Reset()
@@ -281,10 +288,10 @@ func Hashf(k []byte, seed uint64) uint64 {
 		return h
 	case "j264l":
 		h := jenkins.Hash264(k, seed)
-		return uint64(h&0xFFFFFFFF)
+		return uint64(h & 0xFFFFFFFF)
 	case "j264h":
 		h := jenkins.Hash264(k, seed)
-		return uint64((h>>32)&0xFFFFFFFF)
+		return uint64((h >> 32) & 0xFFFFFFFF)
 	case "j264xor":
 		h := jenkins.Hash264(k, seed)
 		return uint64(uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF))
@@ -318,36 +325,63 @@ func Hashf(k []byte, seed uint64) uint64 {
 		sipSeedSet(seed)
 		a, _ := siphashpg.Siphash(k, seeds, siphashpg.Crounds, siphashpg.Drounds, false)
 		return a
-/*
-	case "siphash64":
-		sipSeedSet(seed)
-		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
-		return a
-	case "siphash128a":
-		sipSeedSet(seed)
-		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return a
-	case "siphash128b":
-		sipSeedSet(seed)
-		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return b
-	case "siphash64al":
-		sipSeedSet(seed)
-		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
-		return uint64(a&0xFFFFFFFF)
-	case "siphash64ah":
-		sipSeedSet(seed)
-		a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
-		return uint64((a>>32)&0xFFFFFFFF)
-	case "siphash64bl":
-		sipSeedSet(seed)
-		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return uint64(b&0xFFFFFFFF)
-	case "siphash64bh":
-		sipSeedSet(seed)
-		_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
-		return uint64((b>>32)&0xFFFFFFFF)
-*/
+	case "MetroHash64-1":
+		h := metro.Hash64_1(k, uint32(seed))
+		return h
+	case "MetroHash64-2":
+		h := metro.Hash64_2(k, uint32(seed))
+		return h
+
+	case "MetroHash128-1h":
+		h, _ := metro.Hash128_1(k, uint32(seed))
+		return h
+	case "MetroHash128-1l":
+		_, l := metro.Hash128_1(k, uint32(seed))
+		return l
+	case "MetroHash128-1xor":
+		h, l := metro.Hash128_1(k, uint32(seed))
+		return h ^ l
+
+	case "MetroHash128-2h":
+		h, _ := metro.Hash128_2(k, uint32(seed))
+		return h
+	case "MetroHash128-2l":
+		_, l := metro.Hash128_2(k, uint32(seed))
+		return l
+	case "MetroHash128-2xor":
+		h, l := metro.Hash128_2(k, uint32(seed))
+		return h ^ l
+
+		/*
+			case "siphash64":
+				sipSeedSet(seed)
+				a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
+				return a
+			case "siphash128a":
+				sipSeedSet(seed)
+				a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+				return a
+			case "siphash128b":
+				sipSeedSet(seed)
+				_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+				return b
+			case "siphash64al":
+				sipSeedSet(seed)
+				a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
+				return uint64(a&0xFFFFFFFF)
+			case "siphash64ah":
+				sipSeedSet(seed)
+				a, _ := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, false)
+				return uint64((a>>32)&0xFFFFFFFF)
+			case "siphash64bl":
+				sipSeedSet(seed)
+				_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+				return uint64(b&0xFFFFFFFF)
+			case "siphash64bh":
+				sipSeedSet(seed)
+				_, b := siphash.Siphash(k, seeds, siphash.Crounds, siphash.Drounds, true)
+				return uint64((b>>32)&0xFFFFFFFF)
+		*/
 	case "keccak224":
 		fp28 = fp28[0:0]
 		k224.Reset()
@@ -357,14 +391,14 @@ func Hashf(k []byte, seed uint64) uint64 {
 		//fmt.Printf("len(k)=%d, k=%#X, fp=%#x\n", len(k), k, fp28)
 		//fmt.Printf("len(fp28)=%d\n", fp28)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp28[0])<<56 | uint64(fp28[1])<<48 | uint64(fp28[2])<<40 | uint64(fp28[3])<<32 | uint64(fp28[4])<<24 | uint64(fp28[5])<<16 | uint64(fp28[6])<<8  | uint64(fp28[7])<<0 
+		return uint64(fp28[0])<<56 | uint64(fp28[1])<<48 | uint64(fp28[2])<<40 | uint64(fp28[3])<<32 | uint64(fp28[4])<<24 | uint64(fp28[5])<<16 | uint64(fp28[6])<<8 | uint64(fp28[7])<<0
 	case "keccakpg643":
 		fp8 = fp8[0:0]
 		k643.Reset()
 		k643.Write(k)
 		fp8 = k643.Sum(fp8)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp8[0])<<56 | uint64(fp8[1])<<48 | uint64(fp8[2])<<40 | uint64(fp8[3])<<32 | uint64(fp8[4])<<24 | uint64(fp8[5])<<16 | uint64(fp8[6])<<8  | uint64(fp8[7])<<0 
+		return uint64(fp8[0])<<56 | uint64(fp8[1])<<48 | uint64(fp8[2])<<40 | uint64(fp8[3])<<32 | uint64(fp8[4])<<24 | uint64(fp8[5])<<16 | uint64(fp8[6])<<8 | uint64(fp8[7])<<0
 	case "keccakpg644":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
@@ -372,7 +406,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		k644.Write(k)
 		fp = k644.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
+		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "keccakpg648":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
@@ -380,7 +414,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		k648.Write(k)
 		fp = k648.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
+		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "keccakpg160":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
@@ -389,13 +423,13 @@ func Hashf(k []byte, seed uint64) uint64 {
 		fp = k160.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		if false {
-	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
-	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
-	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
-	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-	        return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
+			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
+			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
+			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
+			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
+			return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 		}
 	case "skein256xor":
 		fp := make([]byte, 32)
@@ -405,14 +439,14 @@ func Hashf(k []byte, seed uint64) uint64 {
 		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
 		if true {
-	        low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
-	        med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
-	        hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
-	        top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-	        return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
+			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
+			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
+			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
+			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-	    	return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
-	    }
+			return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
+		}
 	case "skein256":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
@@ -420,7 +454,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		skein256.Write(k)
 		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8  | uint64(fp[7])<<0 
+		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "skein256hi":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
@@ -428,7 +462,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		skein256.Write(k)
 		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-    	return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
+		return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
 	case "sha1":
 		//fp := make([]byte, 20)
 		//fp = fp[0:0]
@@ -437,13 +471,13 @@ func Hashf(k []byte, seed uint64) uint64 {
 		fp20 = fp20[0:0]
 		fp20 = sha1160.Sum(fp20)
 		if false {
-	        low := fp20[0] ^ fp20[4] ^ fp20[8] ^ fp20[12] ^ fp20[16]
-	        med := fp20[1] ^ fp20[5] ^ fp20[9] ^ fp20[13] ^ fp20[17]
-	        hii := fp20[2] ^ fp20[6] ^ fp20[10] ^ fp20[14] ^ fp20[18]
-	        top := fp20[3] ^ fp20[7] ^ fp20[11] ^ fp20[15] ^ fp20[19]
-        	return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			low := fp20[0] ^ fp20[4] ^ fp20[8] ^ fp20[12] ^ fp20[16]
+			med := fp20[1] ^ fp20[5] ^ fp20[9] ^ fp20[13] ^ fp20[17]
+			hii := fp20[2] ^ fp20[6] ^ fp20[10] ^ fp20[14] ^ fp20[18]
+			top := fp20[3] ^ fp20[7] ^ fp20[11] ^ fp20[15] ^ fp20[19]
+			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 | uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
+			return uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 | uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8 | uint64(fp20[7])<<0
 		}
 	default:
 		fmt.Printf("hf=%q\n", Hf2)

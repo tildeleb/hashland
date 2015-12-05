@@ -5,54 +5,54 @@ package main
 // However I can't replicate the result
 
 import (
+	"bufio"
+	"crypto/sha1"
 	"flag"
 	"fmt"
-	"os"
+	. "github.com/tildeleb/hashland/hashf"     // cleaved
+	. "github.com/tildeleb/hashland/hashtable" // cleaved
+	"github.com/tildeleb/hashland/nhash"
+	"github.com/tildeleb/hashland/smhasher"
+	"hash"
 	"io"
-	"bufio"
+	"leb.io/hrff"
+	"math/rand"
+	"os"
 	"sort"
 	"time"
-	"hash"
-	"math/rand"
-	"crypto/sha1"
-	"leb.io/hrff"
-	. "github.com/tildeleb/hashland/hashf" // cleaved
-	. "github.com/tildeleb/hashland/hashtable" // cleaved
-	"github.com/tildeleb/hashland/smhasher"
-	"github.com/tildeleb/hashland/nhash"
 
 	// remove these at some point
-	"github.com/tildeleb/hashland/jenkins" // remove
-	"github.com/tildeleb/hashland/aeshash" // remove
-	"github.com/tildeleb/hashland/siphash" // remove
-	"github.com/tildeleb/hashland/nullhash" // remove
-	"github.com/tildeleb/hashland/gomap" // remove
-	"github.com/tildeleb/hashland/keccak" // remove
+	"github.com/tildeleb/hashland/aeshash"  // remove
+	"github.com/tildeleb/hashland/gomap"    // remove
+	"github.com/tildeleb/hashland/jenkins"  // remove
+	"github.com/tildeleb/hashland/keccak"   // remove
 	"github.com/tildeleb/hashland/keccakpg" // remove
+	"github.com/tildeleb/hashland/nullhash" // remove
+	"github.com/tildeleb/hashland/siphash"  // remove
 )
 
 func ReadFile(file string, cb func(line string)) int {
 	var lines int
 	//fmt.Printf("ReadFile: file=%q\n", file)
 	f, err := os.Open(file)
-    if err != nil {
-        panic("ReadFile: opening file")
-    }
-    defer f.Close()
+	if err != nil {
+		panic("ReadFile: opening file")
+	}
+	defer f.Close()
 
-    rl := bufio.NewReader(f)
-    //rs := csv.NewReader(f)
-    // rs.Comma = '\t'      // Use tab-separated values
+	rl := bufio.NewReader(f)
+	//rs := csv.NewReader(f)
+	// rs.Comma = '\t'      // Use tab-separated values
 
-    for {
+	for {
 		//r, err := rs.Read()
-        s, err := rl.ReadString(10) // 0x0A separator = newline
-        if err == io.EOF {
-               // fmt.Printf("ReadFile: EOF\n")
-                return lines
-        } else if err != nil {
-                panic("reading file")
-        }
+		s, err := rl.ReadString(10) // 0x0A separator = newline
+		if err == io.EOF {
+			// fmt.Printf("ReadFile: EOF\n")
+			return lines
+		} else if err != nil {
+			panic("reading file")
+		}
 		if s[len(s)-1] == '\n' {
 			s = s[:len(s)-1]
 		}
@@ -66,10 +66,9 @@ func ReadFile(file string, cb func(line string)) int {
 		if cb != nil {
 			cb(s)
 		}
-        lines++
-    }
+		lines++
+	}
 }
-
 
 func Test0(file string, lines int, hf2 string) (ht *HashTable) {
 	var cnt int
@@ -86,11 +85,11 @@ func Test0(file string, lines int, hf2 string) (ht *HashTable) {
 
 func TestA(file string, lines int, hf2 string) (ht *HashTable) {
 	//var lines int
-/*
-	var countlines = func(line string) {
-		lines++
-	}
-*/
+	/*
+		var countlines = func(line string) {
+			lines++
+		}
+	*/
 	var addLine = func(line string) {
 		ht.Insert([]byte(line))
 	}
@@ -212,6 +211,7 @@ func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 	return
 }
 
+// integers 0 to n
 func TestI(file string, lines int, hf2 string) (ht *HashTable) {
 	//fmt.Printf("ni=%d\n", *ni)
 	bs := make([]byte, 4, 4)
@@ -227,6 +227,7 @@ func TestI(file string, lines int, hf2 string) (ht *HashTable) {
 	return
 }
 
+// marching 1
 func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	length := 900
 	keys := length * 8
@@ -237,7 +238,7 @@ func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	for k := range key {
 		for i := uint(0); i < 8; i++ {
 			key[k] = 1 << i
-			//fmt.Printf("k=%d, i=%d, key=%v\n", k, i, key)
+			//fmt.Printf("k=%d, i=%d, key=%#0x2\n", k, i, key)
 			ht.Insert(key)
 			key[k] = 0
 		}
@@ -248,44 +249,43 @@ func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 }
 
 func unhex(c byte) uint8 {
-        switch {
-        case '0' <= c && c <= '9':
-                return c - '0'
-        case 'a' <= c && c <= 'f':
-                return c - 'a' + 10
-        case 'A' <= c && c <= 'F':
-                return c - 'A' + 10
-        }
-        panic("unhex: bad input")
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	panic("unhex: bad input")
 }
 
 func hexToBytes(s string) []byte {
-        var data = make([]byte, 1000, 1000)
-        data = data[0:len(s)/2]
+	var data = make([]byte, 1000, 1000)
+	data = data[0 : len(s)/2]
 
-        n := len(s)
-        if (n&1) == 1 {
-                panic("gethex: string must be even")
-        }
-        for i := range data {
-                data[i] = unhex(s[2*i])<<4 | unhex(s[2*i+1])
-        }
-        //fmt.Printf("hexToBytes: len(data)=%d, len(s)=%d\n", len(data), len(s))
-        return data[0:len(s)/2]
+	n := len(s)
+	if (n & 1) == 1 {
+		panic("gethex: string must be even")
+	}
+	for i := range data {
+		data[i] = unhex(s[2*i])<<4 | unhex(s[2*i+1])
+	}
+	//fmt.Printf("hexToBytes: len(data)=%d, len(s)=%d\n", len(data), len(s))
+	return data[0 : len(s)/2]
 }
 
 var r = rand.Float64
 
 func rbetween(a uint64, b uint64) uint64 {
-        rf := r()
-        diff := float64(b - a + 1)
-        r2 := rf * diff
-        r3 := r2 + float64(a)
-        //      fmt.Printf("rbetween: a=%d, b=%d, rf=%f, diff=%f, r2=%f, r3=%f\n", a, b, rf, diff, r2, r3)
-        ret := uint64(r3)
-        return ret
+	rf := r()
+	diff := float64(b - a + 1)
+	r2 := rf * diff
+	r3 := r2 + float64(a)
+	//      fmt.Printf("rbetween: a=%d, b=%d, rf=%f, diff=%f, r2=%f, r3=%f\n", a, b, rf, diff, r2, r3)
+	ret := uint64(r3)
+	return ret
 }
-
 
 func TestK(file string, lines int, hf2 string) (ht *HashTable) {
 	var seed uint64
@@ -302,12 +302,29 @@ func TestK(file string, lines int, hf2 string) (ht *HashTable) {
 	start := time.Now()
 	for seed = 0; seed < uint64(*ns); seed++ {
 		rseed = rbetween(0, uint64(1)<<63)
-		ReadFile(file, hashLine)	
+		ReadFile(file, hashLine)
 	}
 	stop := time.Now()
 	ht.Dur = tdiff(start, stop)
 	return
 }
+
+/*
+func TestS(file string, lines int, hf2 string) (ht *HashTable) {
+	var seed uint64
+	var rseed uint64
+
+	sha1160 := sha1.New()
+	fp20 := make([]byte, 20, 20)
+
+	sha1160.Reset()
+	sha1160.Write(k)
+	fp20 = fp20[0:0]
+	fp20 = sha1160.Sum(fp20)
+
+	return
+}
+*/
 
 // [ABCDEFGH][EFGHIJKL][IJKLMNOP][MNOPQRST][QRSTUVWX][UVWXYZ01]
 // given a slice of strings, generate all the combinations in order
@@ -316,12 +333,12 @@ func genWords(perms []string, f func(word string)) {
 	var idx int
 	var inc = func() bool {
 		// increment counter with carry
-		for idx = 0 ;; {
+		for idx = 0; ; {
 			indices[idx]++
 			if indices[idx] >= len(perms[idx]) {
 				indices[idx] = 0
 				idx++
-				if (idx >= len(perms)) {
+				if idx >= len(perms) {
 					return true
 				}
 				continue
@@ -355,8 +372,8 @@ func genWords(perms []string, f func(word string)) {
 }
 
 func tdiff(begin, end time.Time) time.Duration {
-    d := end.Sub(begin)
-    return d
+	d := end.Sub(begin)
+	return d
 }
 
 // IntSlice attaches the methods of Interface to []int, sorting in increasing order.
@@ -411,7 +428,7 @@ func benchmark32s(n int) {
 		//hashes = hashes[:]
 		//fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
 		pn := hrff.Int64{int64(n), ""}
-		ps := hrff.Int64{int64(n*ksiz), "B"}
+		ps := hrff.Int64{int64(n * ksiz), "B"}
 		//fmt.Printf("benchmark32s: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
 		if false {
 			_ = gomap.Hash64(bs, 0)
@@ -428,7 +445,7 @@ func benchmark32s(n int) {
 				// fp20 = fp20[0:0]
 				// fp20 = sha1160.Sum(fp20)
 				// _ = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 |
-				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
+				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0
 				//k224.Reset()
 				//k224.Write(bs)
 				//_ = k224.Sum(nil)
@@ -457,7 +474,7 @@ func benchmark32s(n int) {
 				// fp20 = fp20[0:0]
 				// fp20 = sha1160.Sum(fp20)
 				// _ = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 |
-				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0 
+				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0
 				_ = aeshash.Hash(bs, 0)
 				//k224.Reset()
 				//k224.Write(bs)
@@ -486,11 +503,11 @@ func benchmark32s(n int) {
 
 	fmt.Printf("benchmark32s: sort n=%d\n", n)
 	//hashes.Sort()
-/*
-	for i := 0; i < n; i++ {
-		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
-	}
-*/
+	/*
+		for i := 0; i < n; i++ {
+			fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+		}
+	*/
 	fmt.Printf("benchmark32s: dup check n=%d\n", n)
 	//dups, mrun := checkForDups32(hashes)
 	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
@@ -512,7 +529,7 @@ func benchmark32g(h hash.Hash64, hf2 string, n int) {
 		//hashes = hashes[:]
 		//fmt.Printf("ksiz=%d, len(bs)=%d\n", ksiz, len(bs))
 		pn := hrff.Int64{int64(n), ""}
-		ps := hrff.Int64{int64(n*ksiz), "B"}
+		ps := hrff.Int64{int64(n * ksiz), "B"}
 		//fmt.Printf("benchmark32g: gen n=%d, n=%h, keySize=%d, size=%h\n", n, pn, ksiz, ps)
 		start, stop := time.Now(), time.Now()
 		if h != nil {
@@ -544,14 +561,14 @@ func benchmark32g(h hash.Hash64, hf2 string, n int) {
 				start = time.Now()
 				for i := 0; i < n; i++ {
 					//bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-					Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+					Hashf(bs, 0) // the generic adapter is very inefficient, as much as 6X slower, however same for everyone
 				}
 				stop = time.Now()
 			default:
 				start = time.Now()
 				for i := 0; i < n; i++ {
 					//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
-					Hashf(bs, 0)	// the generic adapter is very inefficient, as much as 6X slower, however same for everyone
+					Hashf(bs, 0) // the generic adapter is very inefficient, as much as 6X slower, however same for everyone
 					//hashes[i] = h
 					//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
 				}
@@ -569,11 +586,11 @@ func benchmark32g(h hash.Hash64, hf2 string, n int) {
 	if *cd {
 		fmt.Printf("benchmark32g: sort n=%d\n", n)
 		//hashes.Sort()
-	/*
-		for i := 0; i < n; i++ {
-			fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
-		}
-	*/
+		/*
+			for i := 0; i < n; i++ {
+				fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+			}
+		*/
 		fmt.Printf("benchmark32g: dup check n=%d\n", n)
 		//dups, mrun := checkForDups32(hashes)
 		//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
@@ -581,30 +598,31 @@ func benchmark32g(h hash.Hash64, hf2 string, n int) {
 }
 
 var benchmarks = []string{"j332c", "j232", "sbox", "CrapWow"}
+
 //var benchmarks = []string{"j332c"}
 
 func benchmark(hashes []string, hf2 string, n int) {
 	//for _, v := range hashes {
-		//hf32 := Halloc(v)
-		//fmt.Printf("benchmark32g: %q\n", v)
-		benchmark32g(nil, hf2, n)
-		fmt.Printf("\n")
+	//hf32 := Halloc(v)
+	//fmt.Printf("benchmark32g: %q\n", v)
+	benchmark32g(nil, hf2, n)
+	fmt.Printf("\n")
 	//}
 }
 
 type Test struct {
-	name		string
-	flag		**bool
-	ptf			func(file string, lines int, hashf string) (ht *HashTable)
-	desc		string
+	name string
+	flag **bool
+	ptf  func(file string, lines int, hashf string) (ht *HashTable)
+	desc string
 }
 
 var Tests = []Test{
 	{"TestA", &A, TestA, "insert keys"},
-	{"TestB", &B, TestB, "add newline to key"},	
+	{"TestB", &B, TestB, "add newline to key"},
 	{"TestC", &C, TestC, "add 4 newlines to key"},
 	{"TestD", &D, TestD, "prepend ABCDE to key"},
-	{"TestE", &E, TestE, "add 1 duplicate key"},		
+	{"TestE", &E, TestE, "add 1 duplicate key"},
 	{"TestF", &F, TestF, "add 3 duplicate keys"},
 	{"TestG", &G, TestF, "reverse letter order in key"},
 	{"TestH", &H, TestH, "words from letter combinations in wc"},
@@ -640,7 +658,7 @@ func runTestsWithFileAndHashes(file string, lines int, hf []string) {
 				if *h64 && hi.Size != 64 {
 					continue
 				}
-				fmt.Printf("\t%15q: ", Hf2)
+				fmt.Printf("\t%20q: ", Hf2)
 				ht := test.ptf(file, lines, Hf2)
 				ht.Print()
 			}
@@ -684,34 +702,33 @@ var H = flag.Bool("H", false, "test H")
 var I = flag.Bool("I", false, "test I")
 var J = flag.Bool("J", false, "test J")
 var K = flag.Bool("K", false, "test K")
+var S = flag.Bool("S", false, "test S")
 
 var letters = []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
 var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K}
 
-
 func allTestsOn() {
-	*A, *B, *C, *D, *E, *F, *G, *H , *I, *J = true, true, true, true, true, true, true, true, true, true
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J = true, true, true, true, true, true, true, true, true, true
 }
 
 func allTestsOff() {
-	*A, *B, *C, *D, *E, *F, *G, *H , *I, *J = false, false, false, false, false, false, false, false, false, false
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J = false, false, false, false, false, false, false, false, false, false
 }
 
-
 func main() {
-/*
-	var cnt int
-	var f = func(word string) {
-		cnt++
-		//fmt.Printf("%q\n", word)
-	}
+	/*
+		var cnt int
+		var f = func(word string) {
+			cnt++
+			//fmt.Printf("%q\n", word)
+		}
 
-	test := []string{"ab", "cd"}
-	test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-	genWords(test, f)
-	fmt.Printf("cnt=%d\n", cnt)
-	return
-*/
+		test := []string{"ab", "cd"}
+		test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
+		genWords(test, f)
+		fmt.Printf("cnt=%d\n", cnt)
+		return
+	*/
 	flag.Parse()
 	if *all {
 		allTestsOn()
@@ -745,7 +762,7 @@ func main() {
 			}
 		} else {
 			Hf2 = *hf
-			smhasher.RunSMhasher(Hf2, *v)	
+			smhasher.RunSMhasher(Hf2, *v)
 		}
 		return
 	case *b:
@@ -766,7 +783,7 @@ func main() {
 				benchmark(benchmarks, Hf2, *n)
 			}
 		} else {
-			if *hcb {	// this benchmark is hard coded
+			if *hcb { // this benchmark is hard coded
 				fmt.Printf("%q\n", "hardcoded benchmark")
 				benchmark32s(*n)
 			} else {
@@ -815,7 +832,7 @@ func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "%s: [flags] [dictionary-files]\n", os.Args[0])
-    	flag.PrintDefaults()
+		flag.PrintDefaults()
 	}
 
 	bs := make([]byte, 4, 4)

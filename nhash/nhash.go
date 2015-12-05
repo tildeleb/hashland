@@ -55,8 +55,11 @@ type Hash32 interface {
 // Hash64 is a common interface implemented by the streaming 32-bit hash functions.
 type Hash64 interface {
 	HashStream
+	Write64(h uint64) error
 	Sum64() uint64
 }
+
+// *** Everything below here will be removed or chnaged as vargs was way too expensive. ***
 
 // HashF32 is the interface that all non-streaming 32 bit hash functions implement.
 type HashF32 interface {
