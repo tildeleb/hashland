@@ -4,9 +4,9 @@ package hashtable
 
 import (
 	"fmt"
-	"time"
-	"github.com/tildeleb/hashland/hashf"
 	"github.com/tildeleb/cuckoo/primes"
+	"github.com/tildeleb/hashland/hashf"
+	"time"
 )
 
 type Bucket struct {
@@ -14,18 +14,18 @@ type Bucket struct {
 }
 
 type Stats struct {
-	Inserts int
-	Cols int
-	Probes int
-	Heads int
-	Dups int
+	Inserts  int
+	Cols     int
+	Probes   int
+	Heads    int
+	Dups     int
 	Nbuckets int
-	Entries int
-	Q float64
-	Dur time.Duration
+	Entries  int
+	Q        float64
+	Dur      time.Duration
 	//
-	Lines int
-	Size uint64
+	Lines    int
+	Size     uint64
 	SizeLog2 uint64
 	SizeMask uint64
 }
@@ -33,10 +33,10 @@ type Stats struct {
 type HashTable struct {
 	Buckets [][]Bucket
 	Stats
-	Seed uint64
+	Seed  uint64
 	extra int
-	pd bool
-	oa bool
+	pd    bool
+	oa    bool
 	prime bool
 }
 
@@ -44,11 +44,11 @@ type HashTable struct {
 func NextLog2(x uint32) uint32 {
 	if x <= 1 {
 		return x
-	} 
+	}
 	x--
 	n := uint32(0)
 	y := uint32(0)
-	y = x >>16
+	y = x >> 16
 	if y != 0 {
 		n += 16
 		x = y
@@ -58,14 +58,14 @@ func NextLog2(x uint32) uint32 {
 		n += 8
 		x = y
 	}
-	y = x >> 4;
+	y = x >> 4
 	if y != 0 {
-		n +=  4
+		n += 4
 		x = y
 	}
 	y = x >> 2
 	if y != 0 {
-		n +=  2
+		n += 2
 		x = y
 	}
 	y = x >> 1
@@ -141,7 +141,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			}
 			idx++
 			cnt++
-			if idx > ht.Size - 1 {
+			if idx > ht.Size-1 {
 				pass++
 				if pass > 1 {
 					panic("Add: pass")
@@ -155,7 +155,7 @@ func (ht *HashTable) Insert(ka []byte) {
 				//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, ht.Buckets[idx][j].Key)
 				if bh == h {
 					if ht.pd {
-						fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q, bkey=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, k, ht.Buckets[idx][j].Key)
+						//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q, bkey=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, k, ht.Buckets[idx][j].Key)
 						//fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", h, idx, k)
 						//fmt.Printf("hash=0x%08x, idx=%d, key=%q\n", bh, idx, ht.Buckets[idx][0].Key)
 					}
@@ -187,14 +187,13 @@ func (ht *HashTable) HashQuality() float64 {
 		}
 	}
 	n *= float64(ht.Size)
-	d := float64(ht.Inserts) * (float64(ht.Inserts) + 2.0 * float64(ht.Size) - 1.0) 	// (n / 2m) * (n + 2m - 1)
+	d := float64(ht.Inserts) * (float64(ht.Inserts) + 2.0*float64(ht.Size) - 1.0) // (n / 2m) * (n + 2m - 1)
 	//fmt.Printf("buckets=%d, entries=%d, inserts=%d, size=%d, n=%f, d=%f, n/d=%f\n", buckets, entries, ht.Inserts, ht.Size, n, d, n/d)
 	ht.Nbuckets = buckets
 	ht.Entries = entries
 	ht.Q = n / d
 	return n / d
 }
-
 
 func (s *HashTable) Print() {
 	var cvt = func(t float64) (ret float64, unit string) {
@@ -214,20 +213,20 @@ func (s *HashTable) Print() {
 	q := s.HashQuality()
 	t, units := cvt(s.Dur.Seconds())
 	if s.oa {
-/*
-		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
-			panic("runTestsWithFileAndHashes")
-		}
-*/
+		/*
+			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Heads || s.Lines != s.Nbuckets || s.Lines != s.Entries) {
+				panic("runTestsWithFileAndHashes")
+			}
+		*/
 		fmt.Printf("size=%d, inserts=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, time=%0.2f%s\n",
 			s.Size, s.Inserts, s.Cols, s.Probes, float64(s.Cols)/float64(s.Inserts)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
 	} else {
-/*
-		if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
-			fmt.Printf("lines=%d, inserts=%d, probes=%d, entries=%d\n", s.Lines, s.Inserts, s.Probes, s.Entries)
-			panic("runTestsWithFileAndHashes")
-		}
-*/
+		/*
+			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
+				fmt.Printf("lines=%d, inserts=%d, probes=%d, entries=%d\n", s.Lines, s.Inserts, s.Probes, s.Entries)
+				panic("runTestsWithFileAndHashes")
+			}
+		*/
 		fmt.Printf("size=%d, inserts=%d, buckets=%d, dups=%d, q=%0.2f, time=%0.2f%s\n",
 			s.Size, s.Inserts, s.Nbuckets, s.Dups, q, t, units)
 	}

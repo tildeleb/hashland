@@ -812,7 +812,7 @@ func main() {
 	case len(flag.Args()) == 0 && !*b:
 		// no files specified run the only two tests we can with the specified hash functions
 		allTestsOff()
-		*I, *J = true, false
+		*I, *J = true, true
 		if *hf == "all" {
 			runTestsWithFileAndHashes("", *lines, TestHashFunctions)
 		} else {
