@@ -1,4 +1,4 @@
-// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
+// Copyright © 2014,2015 Lawrence E. Bakst. All rights reserved.
 
 package hashf
 
@@ -150,7 +150,7 @@ var HashFunctions = map[string]HashFunction{
 	"adler32": HashFunction{"adler32", 32, false, "adler32", nil},
 }
 
-// "CrapWow" removed because it generates some many dup hashes with duplicated words it goes from O(1) to O(N)
+// "CrapWow" removed because it generates so many dup hashes with duplicated words it goes from O(1) to O(N)
 // "adler32" removed for the same reasons
 // 	"siphash64al", "siphash64ah", "siphash64bl", "siphash64bh",
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l",

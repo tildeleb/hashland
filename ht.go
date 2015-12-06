@@ -1,4 +1,4 @@
-// Copyright © 2014 Lawrence E. Bakst. All rights reserved.
+// Copyright © 2014,2015 Lawrence E. Bakst. All rights reserved.
 package main
 
 // based on http://amsoftware.narod.ru/algo.html
