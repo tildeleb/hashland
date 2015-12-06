@@ -5,6 +5,7 @@ package hashf
 import (
 	"crypto/sha1"
 	"fmt"
+	farm "github.com/dgryski/go-farm"
 	metro "github.com/dgryski/go-metro"
 	"github.com/tildeleb/hashland/aeshash"
 	"github.com/tildeleb/hashland/crapwow"
@@ -124,10 +125,14 @@ var HashFunctions = map[string]HashFunction{
 	"murmur332": HashFunction{"murmur332", 32, false, "murmur332", nil},
 	"murmur364": HashFunction{"murmur364", 64, false, "murmur364", nil},
 
+	"FarmHash32":  HashFunction{"FarmHash32", 32, false, "FarmHash32", nil},
+	"FarmHash64":  HashFunction{"FarmHash64", 64, false, "FarmHash64", nil},
+	"FarmHash128": HashFunction{"FarmHash128", 128, false, "FarmHash128", nil},
+
 	"MetroHash64-1":  HashFunction{"MetroHash64-1", 64, false, "MetroHash64-1", nil},
 	"MetroHash64-2":  HashFunction{"MetroHash64-2", 64, false, "MetroHash64-2", nil},
 	"MetroHash128-1": HashFunction{"MetroHash128-1", 128, false, "MetroHash128-1", nil},
-	"MetroHash128-2": HashFunction{"MetroHash128-2", 64, false, "MetroHash128-2", nil},
+	"MetroHash128-2": HashFunction{"MetroHash128-2", 128, false, "MetroHash128-2", nil},
 
 	"keccak224":   HashFunction{"keccak224", 64, true, "keccak, 224 bit to 64 bit", nil},
 	"keccakpg643": HashFunction{"keccak643", 64, true, "keccak, 64 bit, 3 rounds", nil},
@@ -157,6 +162,10 @@ var TestHashFunctions = []string{"nullhash",
 	"siphash64pg",
 	"MaHash8v64", "spooky64", "spooky128h", "spooky128l", "spooky128xor",
 	"murmur332", "j332c", "j332b", "j232", "j264l", "j264h", "j264xor", "spooky32", "sbox", "gomap32",
+	"FarmHash32",
+	"FarmHash64",
+	"FarmHash128-low", "FarmHash128-high", "FarmHash128-xor",
+	"MetroHash128-2l", "MetroHash128-2h", "MetroHash128-2xor",
 	"MetroHash64-1", "MetroHash64-2",
 	"MetroHash128-1l", "MetroHash128-1h", "MetroHash128-1xor",
 	"MetroHash128-2l", "MetroHash128-2h", "MetroHash128-2xor",
@@ -325,6 +334,23 @@ func Hashf(k []byte, seed uint64) uint64 {
 		sipSeedSet(seed)
 		a, _ := siphashpg.Siphash(k, seeds, siphashpg.Crounds, siphashpg.Drounds, false)
 		return a
+
+	case "FarmHash32":
+		h := farm.Fingerprint32(k)
+		return uint64(h & 0xFFFFFFFF)
+	case "FarmHash64":
+		h := farm.Fingerprint64(k)
+		return h
+	case "FarmHash128-high":
+		h, _ := farm.Fingerprint128(k)
+		return h
+	case "FarmHash128-low":
+		_, l := farm.Fingerprint128(k)
+		return l
+	case "FarmHash128-xor":
+		h, l := farm.Fingerprint128(k)
+		return h ^ l
+
 	case "MetroHash64-1":
 		h := metro.Hash64_1(k, uint32(seed))
 		return h
