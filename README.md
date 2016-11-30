@@ -1,12 +1,6 @@
 HashLand
 ========
-
-**Trust no code or hash functions here yet**
-
-**Work in progress, more hashes to come soon**
-
-**Some licensing information missing; will be rectified soon**
-
+Hashland is a collection of hash functions and functionality to test them.
 
 Introduction
 ------------
@@ -22,17 +16,18 @@ HashLand contains the following functionality.
 
 5. The ability to benchmark hash functions.
 
-6. A package, "nhash" with a proposed new set of Go interfaces for hash functions that complement the existing core Go streaming hash interface. The core of the proposal is:
+6. A package, "nhash" with a new set of Go interfaces for hash functions that complement the existing core Go streaming hash interface. The core of the proposal is:
 
 	`Hash32(b []byte, seeds ...uint32) uint32`  
 	`Hash64(b []byte, seeds ...uint64) uint64`  
 	`Hash128(b []byte, seeds ...uint64) (uint64, uint64)`  
-	`Hash(in []byte, out []byte, seeds ...uint64) []byte`  
-	I am considering changing some or all of the variadic arguments to `…byte` but I suspect doing so will make calling these functions less convenient. I would love feedback on that.
+	`Hash(in []byte, out []byte, seeds ...uint64) []byte)`
+
+My experiment using a variadic argument as an optional argument for a seed is deemed a failure for two reasons. Performance of variadic arguments causes an allocation on each invocation. I knew that going in and I should have known better. Go style eschews the use of a variable argument as an optional argument, although I am not sure I agree 100%. I am considering changing some or all of the variadic arguments to `…byte` but doing so will make calling these functions less convenient.
 
 Background
 ----------
-In the process of writing a [cuckoo hash table](https://github.com/tildeleb/cuckoo) I wondered which hash functions would be the best ones to use. I was frustrated that the core Go libraries didn't contain a useful set of hash functions for constructing hash tables. Also, I had always wanted to experiment with hash functions. So I spend some time doing building HashLand to figure it all out. I wrote a bunch of hash functions in pure Go. I spent some time with the gc inliner seeing how much optimization could be done in the context of Go. I forked some hash functions from other repositories, and tested them out. I ended up putting in a bit more effort than I had planned
+In the process of writing a [cuckoo hash table](https://github.com/tildeleb/cuckoo) I wondered which hash functions would be the best ones to use. I was frustrated that the core Go libraries didn't contain a useful set of hash functions for constructing hash tables. Also, I had always wanted to experiment with hash functions. So I spend some time building HashLand to figure it all out. I wrote a bunch of hash functions in pure Go. I spent some time with the gc inliner seeing how much optimization could be done in the context of Go. I forked some hash functions from other repositories, and tested them out. I ended up putting in a bit more effort than I had planned
 
 Quality of Hash Functions
 -------------------------
@@ -243,5 +238,7 @@ Tests
 	leb@hula:~/gotest/src/github.com/tildeleb/hashland % 
 
 
-
+Note
+----
+**Some licensing information may be missing; will be rectified soon**
 

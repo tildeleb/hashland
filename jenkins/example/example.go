@@ -1,5 +1,5 @@
 // Copyright © 2014 Lawrence E. Bakst. All rights reserved.
-package main 
+package main
 
 import "flag"
 import "fmt"
@@ -9,10 +9,11 @@ import "sort"
 import "os"
 import "log"
 import "runtime/pprof"
+import "leb.io/hashland/jenkins"
+import "leb.io/hrff"
+
 //import "math/rand"
 //import "runtime"
-import "github.com/tildeleb/hashland/jenkins"
-import "github.com/tildeleb/hrff"
 
 func stu(s string) []uint32 {
 	//fmt.Printf("stu: s=%q\n", s)
@@ -33,16 +34,16 @@ func stu(s string) []uint32 {
 /* check that every input bit changes every output bit half the time */
 
 const (
-	HASHSTATE	= 1
-	HASHLEN		= 1
-	MAXPAIR		= 6022
-	MAXLEN		= 70
+	HASHSTATE = 1
+	HASHLEN   = 1
+	MAXPAIR   = 6022
+	MAXLEN    = 70
 )
 
 func driver2() {
-	var qa [MAXLEN+1]byte
-	var qb [MAXLEN+2]byte 
-	// *a = &qa[0], *b = &qb[1];   uint8_t 
+	var qa [MAXLEN + 1]byte
+	var qb [MAXLEN + 2]byte
+	// *a = &qa[0], *b = &qb[1];   uint8_t
 	var c [HASHSTATE]uint32
 	var d [HASHSTATE]uint32
 	var e [HASHSTATE]uint32
@@ -53,19 +54,19 @@ func driver2() {
 	var y [HASHSTATE]uint32
 
 	a := qa[0:MAXLEN]
-	b := qb[1:MAXLEN+1]
+	b := qb[1 : MAXLEN+1]
 
-  	//i=0, j=0, k, l, m=0, z;
+	//i=0, j=0, k, l, m=0, z;
 	// uint32_t hlen;
 
 	fmt.Printf("No more than %d trials should ever be needed \n", MAXPAIR/2)
 	for hlen := 0; hlen < MAXLEN; hlen++ {
-    	z := uint32(0)
-    	i, m := z, z
-    	for i = uint32(0); i < uint32(hlen); i++ { 		// for each input byte,
-			for j := uint32(0); j < 8; j++ {			// for each input bit,
-				for m = uint32(1); m < 8; m++ {			// for serveral possible initvals
-	  				for l := 0; l < HASHSTATE; l++ {	
+		z := uint32(0)
+		i, m := z, z
+		for i = uint32(0); i < uint32(hlen); i++ { // for each input byte,
+			for j := uint32(0); j < 8; j++ { // for each input bit,
+				for m = uint32(1); m < 8; m++ { // for serveral possible initvals
+					for l := 0; l < HASHSTATE; l++ {
 						e[l] = ^(uint32(0))
 						f[l] = e[l]
 						g[l] = e[l]
@@ -74,31 +75,31 @@ func driver2() {
 						y[l] = e[l]
 					}
 
-      	  			// check that every output bit is affected by that input bit
-      	  			k := uint32(0)
-	  				for k = 0; k < MAXPAIR; k += 2 {
+					// check that every output bit is affected by that input bit
+					k := uint32(0)
+					for k = 0; k < MAXPAIR; k += 2 {
 						finished := true
-					    /* keys have one bit different */
-					    for l := 0; l < hlen + 1; l++ {
+						/* keys have one bit different */
+						for l := 0; l < hlen+1; l++ {
 							a[l], b[l] = byte(0), byte(0)
 						}
 						/* have a and b be two keys differing in only one bit */
-						a[i] ^= byte(k<<j)
-						a[i] ^= byte(k>>(8-j))
+						a[i] ^= byte(k << j)
+						a[i] ^= byte(k >> (8 - j))
 						c[0] = jenkins.HashBytesLength(a, hlen, m)
 
-						b[i] ^= byte((k+1)<<j)
-						b[i] ^= byte((k+1)>>(8-j))
+						b[i] ^= byte((k + 1) << j)
+						b[i] ^= byte((k + 1) >> (8 - j))
 						d[0] = jenkins.HashBytesLength(b, hlen, m)
-					    // check every bit is 1, 0, set, and not set at least once
+						// check every bit is 1, 0, set, and not set at least once
 						for l := 0; l < HASHSTATE; l++ {
-							e[l] &= (c[l]^d[l])
-							f[l] &= ^(c[l]^d[l])
+							e[l] &= (c[l] ^ d[l])
+							f[l] &= ^(c[l] ^ d[l])
 							g[l] &= c[l]
 							h[l] &= ^c[l]
 							x[l] &= d[l]
 							y[l] &= ^d[l]
-	      					if e[l]|f[l]|g[l]|h[l]|x[l]|y[l] != 0 {
+							if e[l]|f[l]|g[l]|h[l]|x[l]|y[l] != 0 {
 								finished = false
 							}
 						}
@@ -112,17 +113,17 @@ func driver2() {
 					if k == MAXPAIR {
 						fmt.Printf("Some bit didn't change: ")
 						fmt.Printf("%.8x %.8x %.8x %.8x %.8x %.8x  ", e[0], f[0], g[0], h[0], x[0], y[0])
-	     				fmt.Printf("i %d j %d m %d len %d\n", i, j, m, hlen)
-	     			}
+						fmt.Printf("i %d j %d m %d len %d\n", i, j, m, hlen)
+					}
 					if z == MAXPAIR {
 						goto done
 					}
 				}
 			}
 		}
-done:
+	done:
 		if z < MAXPAIR {
-      		fmt.Printf("Mix success  %2d bytes  %2d initvals  ", i, m)
+			fmt.Printf("Mix success  %2d bytes  %2d initvals  ", i, m)
 			fmt.Printf("required  %d  trials\n", z/2)
 		}
 	}
@@ -187,18 +188,16 @@ func checkForDups64(u Uint64Slice) (dups int) {
 	return
 }
 
-
 func tdiff(begin, end time.Time) time.Duration {
-    d := end.Sub(begin)
-    return d
+	d := end.Sub(begin)
+	return d
 }
-
 
 func benchmark64(n int64) {
 	var hashes = make(Uint64Slice, n)
 	bs := make([]byte, 24, 24)
 
-	fmt.Printf("benchmark64: gen n=%d, n=%h, size=%H\n", n, hrff.Int64{n, ""}, hrff.Int64{n*8, "B"})
+	fmt.Printf("benchmark64: gen n=%d, n=%h, size=%H\n", n, hrff.Int64{n, ""}, hrff.Int64{n * 8, "B"})
 	start := time.Now()
 	for i := int64(0); i < n; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i&0xFF), byte((i>>8)&0xFF), byte((i>>16)&0xFF), byte((i>>24)&0xFF)
@@ -238,7 +237,7 @@ func benchmark32(n int) {
 	//var u = make([]uint32, 1, 1)
 	bs := make([]byte, 4, 4)
 	var pn = hrff.Int64{int64(n), ""}
-	var ps = hrff.Int64{int64(n*4), "B"}
+	var ps = hrff.Int64{int64(n * 4), "B"}
 	fmt.Printf("benchmark32: gen n=%d, n=%h, size=%h\n", n, pn, ps)
 	start := time.Now()
 	for i := 0; i < n; i++ {
@@ -257,11 +256,11 @@ func benchmark32(n int) {
 
 	fmt.Printf("benchmark32: sort n=%d\n", n)
 	//hashes.Sort()
-/*
-	for i := 0; i < n; i++ {
-		fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
-	}
-*/
+	/*
+		for i := 0; i < n; i++ {
+			fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, hashes[i])
+		}
+	*/
 	fmt.Printf("benchmark32: dup check n=%d\n", n)
 	//dups, mrun := checkForDups32(hashes)
 	//fmt.Printf("benchmark32: dups=%d, mrun=%d\n", dups, mrun)
@@ -284,14 +283,14 @@ func ShortTest(n int) {
 
 func main() {
 	flag.Parse()
-    if *p != "" {
-        f, err := os.Create(*p)
-        if err != nil {
-            log.Fatal(err)
-        }
-        pprof.StartCPUProfile(f)
-        defer pprof.StopCPUProfile()
-    }
+	if *p != "" {
+		f, err := os.Create(*p)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	//ShortTest(*n)
 	//return
@@ -311,27 +310,27 @@ func main() {
 
 	b, c := uint32(0), uint32(0)
 	c, b = jenkins.HashString("", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// deadbeef deadbeef
+	fmt.Printf("%08x, %08x\n", c, b) // deadbeef deadbeef
 
 	b, c = 0xdeadbeef, 0
 	c, b = jenkins.HashString("", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// bd5b7dde deadbeef
+	fmt.Printf("%08x, %08x\n", c, b) // bd5b7dde deadbeef
 
-  	b, c = 0xdeadbeef, 0xdeadbeef
+	b, c = 0xdeadbeef, 0xdeadbeef
 	c, b = jenkins.HashString("", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// 9c093ccd bd5b7dde
+	fmt.Printf("%08x, %08x\n", c, b) // 9c093ccd bd5b7dde
 
 	b, c = 0, 0
 	c, b = jenkins.HashString("Four score and seven years ago", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// 17770551 ce7226e6
+	fmt.Printf("%08x, %08x\n", c, b) // 17770551 ce7226e6
 
 	b, c = 1, 0
 	c, b = jenkins.HashString("Four score and seven years ago", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// e3607cae bd371de4
+	fmt.Printf("%08x, %08x\n", c, b) // e3607cae bd371de4
 
 	b, c = 0, 1
 	c, b = jenkins.HashString("Four score and seven years ago", c, b)
-	fmt.Printf("%08x, %08x\n", c, b)	// cd628161 6cbea4b3
+	fmt.Printf("%08x, %08x\n", c, b) // cd628161 6cbea4b3
 
 	driver2()
 }
