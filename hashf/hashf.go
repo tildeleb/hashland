@@ -9,7 +9,7 @@ import (
 	metro "github.com/dgryski/go-metro"
 	"hash"
 	"hash/adler32"
-	"leb.io/hashland/aeshash"
+	"leb.io/aeshash"
 	"leb.io/hashland/crapwow"
 	"leb.io/hashland/gomap"
 	"leb.io/hashland/jenkins"

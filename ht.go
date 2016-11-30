@@ -22,7 +22,7 @@ import (
 	"time"
 
 	// remove these at some point
-	"leb.io/hashland/aeshash"  // remove
+	"leb.io/aeshash"           // remove
 	"leb.io/hashland/gomap"    // remove
 	"leb.io/hashland/jenkins"  // remove
 	"leb.io/hashland/keccak"   // remove
