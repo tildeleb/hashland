@@ -2,7 +2,7 @@
 
 package sbox
 
-import "github.com/tildeleb/hashland/nhash"
+import "leb.io/hashland/nhash"
 
 var SBoxTable = [256]uint32{
 	0x4660c395, 0x3baba6c5, 0x27ec605b, 0xdfc1d81a, 0xaaac4406, 0x3783e9b8, 0xa4e87c68, 0x62dc1b2a,
@@ -43,19 +43,19 @@ func Sbox(key []byte, seed uint32) uint32 {
 	l := len(key)
 	h := uint32(l) + seed
 	for ; (l & ^1) != 0; l -= 2 {
-		h = ( ( ( h ^ SBoxTable[key[0]] ) * 3 ) ^ SBoxTable[key[1]] ) * 3
+		h = (((h ^ SBoxTable[key[0]]) * 3) ^ SBoxTable[key[1]]) * 3
 		key = key[2:]
 	}
 	if l&1 != 0 {
-		h = ( h ^ SBoxTable[key[0]] ) * 3
+		h = (h ^ SBoxTable[key[0]]) * 3
 	}
-	h += ( h >> 22 ) ^ ( h << 4 )
+	h += (h >> 22) ^ (h << 4)
 	return h
 }
 
 type State struct {
-	hash	uint32
-	seed	uint32
+	hash uint32
+	seed uint32
 }
 
 // New returns a new hash.HashF32 interface that computes a 32 bit CrapWow hash.
@@ -91,4 +91,3 @@ func (s *State) Hash32(b []byte, seeds ...uint32) uint32 {
 	s.hash = Sbox(b, s.seed)
 	return s.hash
 }
-

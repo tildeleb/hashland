@@ -1,9 +1,9 @@
-package nullhash 
+package nullhash
 
 import (
 	"hash"
-	"github.com/tildeleb/hashland/nhash"
-	)
+	"leb.io/hashland/nhash"
+)
 
 func Nullhash(b []byte, seed uint64) uint64 {
 	return 0
@@ -17,11 +17,11 @@ func (n *nullhashstate) Size() int {
 	return 8
 }
 
-func  (n *nullhashstate) BlockSize() int {
+func (n *nullhashstate) BlockSize() int {
 	return 8
 }
 
-func  (n *nullhashstate) NumSeedBytes() int {
+func (n *nullhashstate) NumSeedBytes() int {
 	return 8
 }
 
@@ -44,12 +44,12 @@ func (n *nullhashstate) Sum64() uint64 {
 func (n *nullhashstate) Reset() {
 }
 
-func  (n *nullhashstate) Hash64(b []byte, seeds ...uint64) uint64 {
+func (n *nullhashstate) Hash64(b []byte, seeds ...uint64) uint64 {
 	n.ctr++
 	return n.ctr
 }
 
-func  (n *nullhashstate) Hash64S(b []byte, seed uint64) uint64 {
+func (n *nullhashstate) Hash64S(b []byte, seed uint64) uint64 {
 	n.ctr++
 	return n.ctr
 }

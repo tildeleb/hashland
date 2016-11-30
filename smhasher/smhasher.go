@@ -6,11 +6,11 @@ package smhasher
 
 import (
 	"fmt"
+	"leb.io/hashland/hashf"
 	"math"
-	"time"
 	"math/rand"
 	"strings"
-	"github.com/tildeleb/hashland/hashf"
+	"time"
 )
 
 // stubs for now
@@ -99,7 +99,7 @@ func BytesHash(b []byte, aseed uintptr) uintptr {
 	return uintptr(h)
 }
 
-func StringHash (s string, aseed uintptr) uintptr {
+func StringHash(s string, aseed uintptr) uintptr {
 	seed := uint64(aseed)
 	b := make([]byte, len(s), len(s))
 	b = b[:]
@@ -122,7 +122,7 @@ func Int64Hash(i uint64, aseed uintptr) uintptr {
 	b := make([]byte, 8, 8)
 	b = b[:]
 	b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7] = byte(i&0xFF), byte((i>>8)&0xFF), byte((i>>16)&0xFF), byte((i>>24)&0xFF), byte((i>>32)&0xFF), byte((i>>40)&0xFF), byte((i>>48)&0xFF),
-	byte((i>>56)&0xFF)
+		byte((i>>56)&0xFF)
 	h := hashf.Hashf(b, seed)
 	return uintptr(h)
 }
@@ -318,11 +318,11 @@ func TestSmhasherCyclic(t *TState) (ret bool) {
 }
 
 type pair struct {
-	n	int
-	k	int
+	n int
+	k int
 }
-var pairs = []pair{pair{32, 6}, pair{40, 6}, pair{48, 5}, pair{56, 5}, pair{64, 5}, pair{96, 4}, pair{256, 3}, pair{2048, 2},
-}
+
+var pairs = []pair{pair{32, 6}, pair{40, 6}, pair{48, 5}, pair{56, 5}, pair{64, 5}, pair{96, 4}, pair{256, 3}, pair{2048, 2}}
 
 // Test strings with only a few bits set
 func TestSmhasherSparse(t *TState) (ret bool) {
@@ -362,11 +362,11 @@ type Permutation struct {
 }
 
 var Permutations = []Permutation{
-	Permutation{8,	[]uint32{0, 1, 2, 3, 4, 5, 6, 7}},
-	Permutation{8,	[]uint32{0, 1 << 29, 2 << 29, 3 << 29, 4 << 29, 5 << 29, 6 << 29, 7 << 29}},
+	Permutation{8, []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+	Permutation{8, []uint32{0, 1 << 29, 2 << 29, 3 << 29, 4 << 29, 5 << 29, 6 << 29, 7 << 29}},
 	Permutation{20, []uint32{0, 1}},
 	Permutation{20, []uint32{0, 1 << 31}},
-	Permutation{6,	[]uint32{0, 1, 2, 3, 4, 5, 6, 7, 1 << 29, 2 << 29, 3 << 29, 4 << 29, 5 << 29, 6 << 29, 7 << 29}},
+	Permutation{6, []uint32{0, 1, 2, 3, 4, 5, 6, 7, 1 << 29, 2 << 29, 3 << 29, 4 << 29, 5 << 29, 6 << 29, 7 << 29}},
 }
 
 // Test all possible combinations of n blocks from the set s.
@@ -650,6 +650,7 @@ func benchmarkHash(n, N int) {
 }
 
 var N = 0
+
 func BenchmarkHash5()     { benchmarkHash(5, N) }
 func BenchmarkHash16()    { benchmarkHash(16, N) }
 func BenchmarkHash64()    { benchmarkHash(64, N) }
@@ -657,33 +658,32 @@ func BenchmarkHash1024()  { benchmarkHash(1024, N) }
 func BenchmarkHash65536() { benchmarkHash(65536, N) }
 
 type Test struct {
-	pf 			func(ts *TState) bool
-	desc		string
+	pf   func(ts *TState) bool
+	desc string
 }
 
 var Tests = []Test{
-	Test{TestSmhasherSanity,			"TestSmhasherSanity"},
-	Test{TestSmhasherSeed,				"TestSmhasherSeed"},
-	Test{TestSmhasherText,				"TestSmhasherText"},
-	Test{TestSmhasherWindowed,			"TestSmhasherWindowed"},
-	Test{TestSmhasherAvalanche,			"TestSmhasherAvalanche"},
-	Test{TestSmhasherPermutation,		"TestSmhasherPermutation"},
-	Test{TestSmhasherSparse,			"TestSmhasherSparse"},
-	Test{TestSmhasherCyclic,			"TestSmhasherCyclic"},
-	Test{TestSmhasherTwoNonzero,		"TestSmhasherSmallKeys"},
-	Test{TestSmhasherSmallKeys,			"TestSmhasherZeros"},
-	Test{TestSmhasherAppendedZeros,		"TestSmhasherAppendedZeros"},
+	Test{TestSmhasherSanity, "TestSmhasherSanity"},
+	Test{TestSmhasherSeed, "TestSmhasherSeed"},
+	Test{TestSmhasherText, "TestSmhasherText"},
+	Test{TestSmhasherWindowed, "TestSmhasherWindowed"},
+	Test{TestSmhasherAvalanche, "TestSmhasherAvalanche"},
+	Test{TestSmhasherPermutation, "TestSmhasherPermutation"},
+	Test{TestSmhasherSparse, "TestSmhasherSparse"},
+	Test{TestSmhasherCyclic, "TestSmhasherCyclic"},
+	Test{TestSmhasherTwoNonzero, "TestSmhasherSmallKeys"},
+	Test{TestSmhasherSmallKeys, "TestSmhasherZeros"},
+	Test{TestSmhasherAppendedZeros, "TestSmhasherAppendedZeros"},
 }
 
 type TState struct {
-	hashf		string
-	verbose		bool
+	hashf   string
+	verbose bool
 }
 
-
 func tdiff(begin, end time.Time) time.Duration {
-    d := end.Sub(begin)
-    return d
+	d := end.Sub(begin)
+	return d
 }
 
 func RunSMhasher(hashf string, v bool) {
@@ -701,4 +701,3 @@ func RunSMhasher(hashf string, v bool) {
 	}
 	return
 }
-

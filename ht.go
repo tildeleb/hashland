@@ -9,12 +9,12 @@ import (
 	"crypto/sha1"
 	"flag"
 	"fmt"
-	. "github.com/tildeleb/hashland/hashf"     // cleaved
-	. "github.com/tildeleb/hashland/hashtable" // cleaved
-	"github.com/tildeleb/hashland/nhash"
-	"github.com/tildeleb/hashland/smhasher"
 	"hash"
 	"io"
+	. "leb.io/hashland/hashf"     // cleaved
+	. "leb.io/hashland/hashtable" // cleaved
+	"leb.io/hashland/nhash"
+	"leb.io/hashland/smhasher"
 	"leb.io/hrff"
 	"math/rand"
 	"os"
@@ -22,13 +22,13 @@ import (
 	"time"
 
 	// remove these at some point
-	"github.com/tildeleb/hashland/aeshash"  // remove
-	"github.com/tildeleb/hashland/gomap"    // remove
-	"github.com/tildeleb/hashland/jenkins"  // remove
-	"github.com/tildeleb/hashland/keccak"   // remove
-	"github.com/tildeleb/hashland/keccakpg" // remove
-	"github.com/tildeleb/hashland/nullhash" // remove
-	"github.com/tildeleb/hashland/siphash"  // remove
+	"leb.io/hashland/aeshash"  // remove
+	"leb.io/hashland/gomap"    // remove
+	"leb.io/hashland/jenkins"  // remove
+	"leb.io/hashland/keccak"   // remove
+	"leb.io/hashland/keccakpg" // remove
+	"leb.io/hashland/nullhash" // remove
+	"leb.io/hashland/siphash"  // remove
 )
 
 func ReadFile(file string, cb func(line string)) int {

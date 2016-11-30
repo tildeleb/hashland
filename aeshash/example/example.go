@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"leb.io/hashland/aeshash"
 	_ "unsafe"
-	"github.com/tildeleb/hashland/aeshash"
 )
 
 var strs = []string{"abcd", "efgh", "blow", "deadbeef"}
 var ui32 = []uint32{1, 2, 3, 4}
-var ui64= []uint64{1, 2, 3, 4, 5, 6, 7, 8}
+var ui64 = []uint64{1, 2, 3, 4, 5, 6, 7, 8}
 var hash uint64
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 			s := uint64(seed)
 			//h := uint64(0)
 			//pb := &i8[k]
-		    //up := unsafe.Pointer(v)
+			//up := unsafe.Pointer(v)
 			//fmt.Printf("s=%d, h=%d\n", s, h)
 			copy(b, v)
 			b = b[0:len(v)]

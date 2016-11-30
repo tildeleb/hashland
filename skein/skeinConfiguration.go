@@ -20,7 +20,7 @@ package skein
 import (
 	// "crypto/threefish"
 	//"leb/habu/crypto/threefish"
-	"github.com/tildeleb/hashland/threefish"
+	"leb.io/hashland/threefish"
 )
 
 type skeinConfiguration struct {

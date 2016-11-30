@@ -1,7 +1,7 @@
 package aeshash
 
 import _ "unsafe"
-import "github.com/tildeleb/hashland/nhash"
+import "leb.io/hashland/nhash"
 
 var masks [32]uint64
 var shifts [32]uint64
@@ -10,9 +10,9 @@ var shifts [32]uint64
 const hashRandomBytes = 32
 
 // this is really 2 x 128 bit round keys
-var aeskeysched[hashRandomBytes]byte
+var aeskeysched [hashRandomBytes]byte
 
-var aesdebug[hashRandomBytes]byte
+var aesdebug [hashRandomBytes]byte
 
 func aeshashbody()
 
@@ -44,15 +44,15 @@ func init() {
 // What a cute wart it is.
 var (
 	//_ hash.Hash   = new(Digest)
-	_ nhash.Hash64 = new(StateAES)
-	_  nhash.HashStream = new(StateAES)
+	_ nhash.Hash64     = new(StateAES)
+	_ nhash.HashStream = new(StateAES)
 )
 
 type StateAES struct {
-	hash	uint64
-	seed	uint64
-	clen	int
-	tail	[]byte
+	hash uint64
+	seed uint64
+	clen int
+	tail []byte
 }
 
 func NewAES(seed uint64) nhash.Hash64 {
