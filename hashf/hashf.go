@@ -86,6 +86,7 @@ var faes = aeshash.Hash
 var fgomap = gomap.Hash64
 
 var HashFunctions = map[string]HashFunction{
+	"perfecthash":   HashFunction{"perfecthash", 64, true, "perfecthash, 64 bit", nil},
 	"nullhash":      HashFunction{"nullhash", 64, true, "nullhash, 64 bit", &DispEntry{fp: unsafe.Pointer(&fnull), kind: h64s}},
 	"nullhashF64ns": HashFunction{"nullhashF64ns", 64, true, "nullhashF64ns, 64 bit, no seed", nil},
 	"aeshash64":     HashFunction{"aeshash64", 64, true, "aeshash, 64 bit, accelerated", &DispEntry{fp: unsafe.Pointer(&faes), kind: h64s}},
@@ -155,7 +156,7 @@ var HashFunctions = map[string]HashFunction{
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l",
 // 	"siphash64", "siphash128a", "siphash128b",
 // 	"keccak644", "keccak648" "keccak160",
-var TestHashFunctions = []string{"nullhash",
+var TestHashFunctions = []string{"nullhash", "perfecthash",
 	"aeshash64", "gomap64", "j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
@@ -237,7 +238,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 }
 */
 
-func Hashf(k []byte, seed uint64) uint64 {
+func Hashf(k []byte, seed uint64) (h uint64) {
 	/*
 		_, ok := HashFunctions[Hf2]
 		if !ok {
@@ -246,136 +247,114 @@ func Hashf(k []byte, seed uint64) uint64 {
 		}
 	*/
 	switch Hf2 {
+	case "perfecthash":
+		//fmt.Printf("k=%v\n", k)
+		//h = uint64(k[0])<<56 | uint64(k[1])<<48 | uint64(k[2])<<40 | uint64(k[3])<<32 | uint64(k[4])<<24 | uint64(k[5])<<16 | uint64(k[6])<<8 | uint64(k[7])<<0
+		//h = uint64(k[7])<<56 | uint64(k[6])<<48 | uint64(k[5])<<40 | uint64(k[4])<<32 | uint64(k[3])<<24 | uint64(k[2])<<16 | uint64(k[1])<<8 | uint64(k[0])<<0
+		h = uint64(k[3])<<24 | uint64(k[2])<<16 | uint64(k[1])<<8 | uint64(k[0])<<0
+		//fmt.Printf("h=%d\n", h)
 	case "nullhash":
 		nh.Reset()
 		nh.Write(k)
-		h := nh.Sum64()
-		return h
+		h = nh.Sum64()
 	case "nullhashF64ns":
-		h := nhf64.Hash64S(k, 0)
-		return h
+		h = nhf64.Hash64S(k, 0)
 	case "gomap64":
-		h := gomap.Hash64(k, uint64(seed))
-		return h
+		h = gomap.Hash64(k, uint64(seed))
 	case "gomap32":
-		h := gomap.Hash32(k, uint32(seed))
-		return uint64(h)
+		h = uint64(gomap.Hash32(k, uint32(seed)))
 	case "aeshash64":
-		h := aeshash.Hash(k, seed)
-		return h
+		h = aeshash.Hash(k, seed)
+	case "aeshash64I":
+		h = aeshash.Hash64(uint64(k[0])<<56|uint64(k[1])<<48|uint64(k[2])<<40|uint64(k[3])<<32|uint64(k[4])<<24|uint64(k[5])<<16|uint64(k[6])<<8|uint64(k[7])<<0, seed)
 	case "adler32":
 		a32.Reset()
 		a32.Write(k)
-		h := a32.Sum32()
+		h = uint64(a32.Sum32())
 		//fmt.Printf("a32 hash=0x%08x\n", h)
-		return uint64(h)
 	case "sbox":
-		h := sbox.Sbox(k, uint32(seed))
-		return uint64(h)
+		h = uint64(sbox.Sbox(k, uint32(seed)))
 	case "CrapWow":
-		h := crapwow.CrapWow(k, uint32(seed))
+		h = uint64(crapwow.CrapWow(k, uint32(seed)))
 		//fmt.Printf("key=%q, hash=0x%08x\n", string(k), hash)
-		return uint64(h)
 	case "MaHash8v64":
-		h64 := mahash.MaHash8v64(k)
-		return h64
+		h = mahash.MaHash8v64(k)
 	case "j364":
 		c, b := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
-		return uint64(b)<<32 | uint64(c)
+		h = uint64(b)<<32 | uint64(c)
 	case "j332c":
 		c, _ := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
-		return uint64(c)
+		h = uint64(c)
 	case "j332b":
 		_, b := jenkins.Jenkins364(k, len(k), uint32(seed), uint32(seed))
-		return uint64(b)
+		h = uint64(b)
 	case "j232":
-		h := jenkins.Hash232(k, uint32(seed))
-		return uint64(h)
+		h = uint64(jenkins.Hash232(k, uint32(seed)))
 	case "j264":
-		h := jenkins.Hash264(k, seed)
-		return h
+		h = jenkins.Hash264(k, seed)
 	case "j264l":
-		h := jenkins.Hash264(k, seed)
-		return uint64(h & 0xFFFFFFFF)
+		h = uint64(jenkins.Hash264(k, seed) & 0xFFFFFFFF)
 	case "j264h":
-		h := jenkins.Hash264(k, seed)
-		return uint64((h >> 32) & 0xFFFFFFFF)
+		t := jenkins.Hash264(k, seed)
+		h = uint64((t >> 32) & 0xFFFFFFFF)
 	case "j264xor":
-		h := jenkins.Hash264(k, seed)
-		return uint64(uint32(h&0xFFFFFFFF) ^ uint32((h>>32)&0xFFFFFFFF))
+		t := jenkins.Hash264(k, seed)
+		h = uint64(uint32(t&0xFFFFFFFF) ^ uint32((t>>32)&0xFFFFFFFF))
 	case "spooky32":
-		return uint64(spooky.Hash32(k, uint32(seed)))
+		h = uint64(spooky.Hash32(k, uint32(seed)))
 	case "spooky64":
-		return spooky.Hash64(k, seed)
+		h = spooky.Hash64(k, seed)
 	case "spooky128h":
-		h, _ := spooky.Hash128(k, seed)
-		return h
+		h, _ = spooky.Hash128(k, seed)
 	case "spooky128l":
-		_, l := spooky.Hash128(k, seed)
-		return l
+		_, h = spooky.Hash128(k, seed)
 	case "spooky128xor":
-		h, l := spooky.Hash128(k, seed)
-		return h ^ l
+		t, l := spooky.Hash128(k, seed)
+		h = t ^ l
 	case "murmur332":
 		m332.Reset()
 		m332.Write(k)
-		h := m332.Sum32()
-		return uint64(h)
+		t := m332.Sum32()
+		h = uint64(t)
 	case "murmur364":
 		m364.Reset()
 		m364.Write(k)
-		h := m364.Sum64()
-		return h
+		h = m364.Sum64()
 	case "siphash64":
-		h := siphash.Hash(0, 0, k)
-		return h
+		h = siphash.Hash(0, 0, k)
 	case "siphash64pg":
 		sipSeedSet(seed)
-		a, _ := siphashpg.Siphash(k, seeds, siphashpg.Crounds, siphashpg.Drounds, false)
-		return a
-
+		h, _ = siphashpg.Siphash(k, seeds, siphashpg.Crounds, siphashpg.Drounds, false)
 	case "FarmHash32":
-		h := farm.Fingerprint32(k)
-		return uint64(h & 0xFFFFFFFF)
+		t := farm.Fingerprint32(k)
+		h = uint64(t & 0xFFFFFFFF)
 	case "FarmHash64":
-		h := farm.Fingerprint64(k)
-		return h
+		h = farm.Fingerprint64(k)
 	case "FarmHash128-high":
-		h, _ := farm.Fingerprint128(k)
-		return h
+		h, _ = farm.Fingerprint128(k)
 	case "FarmHash128-low":
-		_, l := farm.Fingerprint128(k)
-		return l
+		_, h = farm.Fingerprint128(k)
 	case "FarmHash128-xor":
-		h, l := farm.Fingerprint128(k)
-		return h ^ l
-
+		t, l := farm.Fingerprint128(k)
+		h = t ^ l
 	case "MetroHash64-1":
-		h := metro.Hash64_1(k, uint32(seed))
-		return h
+		h = metro.Hash64_1(k, uint32(seed))
 	case "MetroHash64-2":
-		h := metro.Hash64_2(k, uint32(seed))
-		return h
-
+		h = metro.Hash64_2(k, uint32(seed))
 	case "MetroHash128-1h":
-		h, _ := metro.Hash128_1(k, uint32(seed))
-		return h
+		h, _ = metro.Hash128_1(k, uint32(seed))
 	case "MetroHash128-1l":
-		_, l := metro.Hash128_1(k, uint32(seed))
-		return l
+		_, h = metro.Hash128_1(k, uint32(seed))
 	case "MetroHash128-1xor":
-		h, l := metro.Hash128_1(k, uint32(seed))
-		return h ^ l
-
+		t, l := metro.Hash128_1(k, uint32(seed))
+		h = t ^ l
 	case "MetroHash128-2h":
-		h, _ := metro.Hash128_2(k, uint32(seed))
-		return h
+		h, _ = metro.Hash128_2(k, uint32(seed))
 	case "MetroHash128-2l":
-		_, l := metro.Hash128_2(k, uint32(seed))
-		return l
+		_, h = metro.Hash128_2(k, uint32(seed))
 	case "MetroHash128-2xor":
-		h, l := metro.Hash128_2(k, uint32(seed))
-		return h ^ l
+		t, l := metro.Hash128_2(k, uint32(seed))
+		h = t ^ l
 
 		/*
 			case "siphash64":
@@ -416,14 +395,14 @@ func Hashf(k []byte, seed uint64) uint64 {
 		//fmt.Printf("len(k)=%d, k=%#X, fp=%#x\n", len(k), k, fp28)
 		//fmt.Printf("len(fp28)=%d\n", fp28)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp28[0])<<56 | uint64(fp28[1])<<48 | uint64(fp28[2])<<40 | uint64(fp28[3])<<32 | uint64(fp28[4])<<24 | uint64(fp28[5])<<16 | uint64(fp28[6])<<8 | uint64(fp28[7])<<0
+		h = uint64(fp28[0])<<56 | uint64(fp28[1])<<48 | uint64(fp28[2])<<40 | uint64(fp28[3])<<32 | uint64(fp28[4])<<24 | uint64(fp28[5])<<16 | uint64(fp28[6])<<8 | uint64(fp28[7])<<0
 	case "keccakpg643":
 		fp8 = fp8[0:0]
 		k643.Reset()
 		k643.Write(k)
 		fp8 = k643.Sum(fp8)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp8[0])<<56 | uint64(fp8[1])<<48 | uint64(fp8[2])<<40 | uint64(fp8[3])<<32 | uint64(fp8[4])<<24 | uint64(fp8[5])<<16 | uint64(fp8[6])<<8 | uint64(fp8[7])<<0
+		h = uint64(fp8[0])<<56 | uint64(fp8[1])<<48 | uint64(fp8[2])<<40 | uint64(fp8[3])<<32 | uint64(fp8[4])<<24 | uint64(fp8[5])<<16 | uint64(fp8[6])<<8 | uint64(fp8[7])<<0
 	case "keccakpg644":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
@@ -431,7 +410,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		k644.Write(k)
 		fp = k644.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+		h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "keccakpg648":
 		fp := make([]byte, 8, 8)
 		fp = fp[0:0]
@@ -439,7 +418,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		k648.Write(k)
 		fp = k648.Sum(fp)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+		h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "keccakpg160":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
@@ -452,9 +431,9 @@ func Hashf(k []byte, seed uint64) uint64 {
 			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
 			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
 			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+			h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 		}
 	case "skein256xor":
 		fp := make([]byte, 32)
@@ -468,9 +447,9 @@ func Hashf(k []byte, seed uint64) uint64 {
 			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
 			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
 			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
-			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
+			h = uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
 		}
 	case "skein256":
 		fp := make([]byte, 32)
@@ -479,7 +458,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		skein256.Write(k)
 		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-		return uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+		h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "skein256hi":
 		fp := make([]byte, 32)
 		fp = fp[0:0]
@@ -487,7 +466,7 @@ func Hashf(k []byte, seed uint64) uint64 {
 		skein256.Write(k)
 		fp = skein256.Sum(fp)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-		return uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
+		h = uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
 	case "sha1":
 		//fp := make([]byte, 20)
 		//fp = fp[0:0]
@@ -500,15 +479,15 @@ func Hashf(k []byte, seed uint64) uint64 {
 			med := fp20[1] ^ fp20[5] ^ fp20[9] ^ fp20[13] ^ fp20[17]
 			hii := fp20[2] ^ fp20[6] ^ fp20[10] ^ fp20[14] ^ fp20[18]
 			top := fp20[3] ^ fp20[7] ^ fp20[11] ^ fp20[15] ^ fp20[19]
-			return uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			return uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 | uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8 | uint64(fp20[7])<<0
+			h = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 | uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8 | uint64(fp20[7])<<0
 		}
 	default:
 		fmt.Printf("hf=%q\n", Hf2)
 		panic("hashf")
 	}
-	return 0
+	return
 }
 
 func init() {

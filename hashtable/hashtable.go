@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/tildeleb/cuckoo/primes"
 	"leb.io/hashland/hashf"
+	"leb.io/hrff"
 	"time"
 )
 
@@ -30,15 +31,24 @@ type Stats struct {
 	SizeMask uint64
 }
 
+type TBS struct {
+	t int
+	b int
+	s int
+}
+
 type HashTable struct {
 	Buckets [][]Bucket
 	Stats
+	tbs   []TBS
 	Seed  uint64
 	extra int
 	pd    bool
 	oa    bool
 	prime bool
 }
+
+var Trace bool
 
 // Henry Warren, "Hacker's Delight", ch. 5.3
 func NextLog2(x uint32) uint32 {
@@ -79,8 +89,12 @@ func NewHashTable(size, extra int, pd, oa, prime bool) *HashTable {
 	ht := new(HashTable)
 	ht.Lines = size
 	ht.extra = extra
-	ht.SizeLog2 = uint64(NextLog2(uint32(ht.Lines)) + uint32(extra))
-	ht.Size = 1 << ht.SizeLog2
+	if size < 0 {
+		ht.Size = uint64(-size)
+	} else {
+		ht.SizeLog2 = uint64(NextLog2(uint32(ht.Lines)) + uint32(extra))
+		ht.Size = 1 << ht.SizeLog2
+	}
 	ht.prime = prime
 	if prime {
 		ht.Size = uint64(primes.NextPrime(int(ht.Size)))
@@ -89,7 +103,13 @@ func NewHashTable(size, extra int, pd, oa, prime bool) *HashTable {
 	ht.oa = oa
 	ht.SizeMask = ht.Size - 1
 	ht.Buckets = make([][]Bucket, ht.Size, ht.Size)
+
+	ht.Nbuckets = int(ht.Size)
 	return ht
+}
+
+func btoi(b []byte) int {
+	return int(b[3])<<24 | int(b[2])<<16 | int(b[1])<<8 | int(b[0])
 }
 
 func (ht *HashTable) Insert(ka []byte) {
@@ -118,12 +138,25 @@ func (ht *HashTable) Insert(ka []byte) {
 		if ht.Buckets[idx] == nil {
 			// no entry or chain at this location, make it
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
-			//fmt.Printf("Add: idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			//fmt.Printf("Insert: ins idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			if Trace {
+				fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "I", "t", 0, "b", idx, "s", 0, "v", btoi(k))
+				//fmt.Printf("len(ht.tbs)=%d\n", ht.tbs)
+				for _, tbs := range ht.tbs {
+					fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "U", "t", tbs.t, "b", tbs.b, "s", tbs.s, "v", btoi(k))
+				}
+				ht.tbs = nil
+			}
 			ht.Probes++
 			ht.Heads++
 			return
 		}
 		if ht.oa {
+			//fmt.Printf("Insert: col idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			if Trace {
+				fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "H", "t", 0, "b", idx, "s", 0, "v", btoi(k))
+				ht.tbs = append(ht.tbs, TBS{0, int(idx), 0})
+			}
 			if cnt == 0 {
 				ht.Cols++
 			} else {
@@ -164,6 +197,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			}
 			// add element
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
+			ht.Nbuckets++
 			ht.Probes++
 			break
 		}
@@ -171,6 +205,7 @@ func (ht *HashTable) Insert(ka []byte) {
 }
 
 // The theoretical metric from "Red Dragon Book"
+// appears to be useless
 func (ht *HashTable) HashQuality() float64 {
 	if ht.Inserts == 0 {
 		return 0.0
@@ -189,8 +224,8 @@ func (ht *HashTable) HashQuality() float64 {
 	n *= float64(ht.Size)
 	d := float64(ht.Inserts) * (float64(ht.Inserts) + 2.0*float64(ht.Size) - 1.0) // (n / 2m) * (n + 2m - 1)
 	//fmt.Printf("buckets=%d, entries=%d, inserts=%d, size=%d, n=%f, d=%f, n/d=%f\n", buckets, entries, ht.Inserts, ht.Size, n, d, n/d)
-	ht.Nbuckets = buckets
-	ht.Entries = entries
+	//ht.Nbuckets = buckets
+	//ht.Entries = entries
 	ht.Q = n / d
 	return n / d
 }
@@ -218,8 +253,9 @@ func (s *HashTable) Print() {
 				panic("runTestsWithFileAndHashes")
 			}
 		*/
-		fmt.Printf("size=%d, inserts=%d, cols=%d, probes=%d, cpi=%0.2f%%, ppi=%04.2f, dups=%d, time=%0.2f%s\n",
-			s.Size, s.Inserts, s.Cols, s.Probes, float64(s.Cols)/float64(s.Inserts)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
+		fmt.Printf("size=%h, inserts=%04.2h, probes=%04.2h, cols=%04.2h, cpi=%0.2f%%, ppi=%04.2f, dups=%d, time=%0.2f%s\n",
+			hrff.Int64{int64(s.Size), ""}, hrff.Float64{float64(s.Inserts), ""}, hrff.Float64{float64(s.Probes), ""}, hrff.Float64{float64(s.Cols), ""},
+			float64(s.Cols)/float64(s.Inserts)*100.0, float64(s.Probes)/float64(s.Inserts), s.Dups, t, units)
 	} else {
 		/*
 			if test.name != "TestI" && test.name != "TestJ" && (s.Lines != s.Inserts || s.Lines != s.Probes || s.Lines != s.Entries) {
@@ -227,7 +263,9 @@ func (s *HashTable) Print() {
 				panic("runTestsWithFileAndHashes")
 			}
 		*/
-		fmt.Printf("size=%d, inserts=%d, buckets=%d, dups=%d, q=%0.2f, time=%0.2f%s\n",
-			s.Size, s.Inserts, s.Nbuckets, s.Dups, q, t, units)
+		fmt.Printf("size=%h, inserts=%04.2h, buckets=%04.2h, newBuckets=%04.2h, dups=%d, q=%0.2f, time=%0.2f%s\n",
+			hrff.Int64{int64(s.Size), ""}, hrff.Float64{float64(s.Inserts), ""}, hrff.Float64{float64(s.Nbuckets), ""},
+			hrff.Float64{float64(s.Nbuckets - int(s.Size)), ""},
+			s.Dups, q, t, units)
 	}
 }

@@ -215,12 +215,15 @@ func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 func TestI(file string, lines int, hf2 string) (ht *HashTable) {
 	//fmt.Printf("ni=%d\n", *ni)
 	bs := make([]byte, 4, 4)
-	ht = NewHashTable(*ni, *extra, *pd, *oa, *prime)
+	if *dru {
+		*n = -*n
+	}
+	ht = NewHashTable(*n, *extra, *pd, *oa, *prime) // ??? @@@
 	start := time.Now()
 	for i := 0; i < *ni; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 		ht.Insert(bs)
-		//fmt.Printf("i=%d, 0x%08x, h=0x%08x\n", i, i, h)
+		//fmt.Printf("i=%d, 0x%08x\n", i, i)
 	}
 	stop := time.Now()
 	ht.Dur = tdiff(start, stop)
@@ -686,9 +689,16 @@ var v = flag.Bool("v", false, "verbose")
 var cd = flag.Bool("cd", false, "check for duplicate hashs when running benchmarks")
 
 //var wc = flags.String("wc", "abcdefgh, efghijkl, ijklmnop, mnopqrst, qrstuvwx, uvwxyz01", "letter combinations for word") // 262144 words)
-var ni = flag.Int("ni", 200000, "number of integer keys")
-var n = flag.Int("n", 10000000, "number of hashes for benchmark")
+
+var _ni = hrff.Int{V: 4096, U: "keys"}
+var ni *int = &_ni.V // flag.Int("ni", 200000, "number of integer keys to be inserted")
+
+var _n = hrff.Int{V: 4096, U: "buckets"}
+var n *int = &_n.V // var n = flag.Int("n", 1000000, "number of buckets")
+
+var dru = flag.Bool("dru", false, "don't round (n) up")
 var ns = flag.Int("ns", 1, "number of seeds to test")
+var trace = flag.Bool("t", false, "generate trace file")
 
 var T0 = flag.Bool("0", false, "test 0")
 var A = flag.Bool("A", false, "test A")
@@ -716,6 +726,8 @@ func allTestsOff() {
 }
 
 func main() {
+	flag.Var(&_ni, "ni", "number of integer keys to be inserted.")
+	flag.Var(&_n, "n", "number of buckets in hash table.")
 	/*
 		var cnt int
 		var f = func(word string) {
@@ -730,6 +742,9 @@ func main() {
 		return
 	*/
 	flag.Parse()
+	*ni = _ni.V
+	*n = _n.V
+	Trace = *trace
 	if *all {
 		allTestsOn()
 	}
@@ -811,8 +826,16 @@ func main() {
 		}
 	case len(flag.Args()) == 0 && !*b:
 		// no files specified run the only two tests we can with the specified hash functions
-		allTestsOff()
-		*I, *J = true, true
+		cnt := 0
+		for _, v := range TestPointers {
+			if **v == true {
+				cnt++
+			}
+		}
+		if cnt == 0 {
+			allTestsOff()
+			*I, *J = true, true
+		}
 		if *hf == "all" {
 			runTestsWithFileAndHashes("", *lines, TestHashFunctions)
 		} else {
