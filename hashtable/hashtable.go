@@ -42,6 +42,7 @@ type HashTable struct {
 	Stats
 	tbs   []TBS
 	Seed  uint64
+	Tcnt  int // trace counter
 	extra int
 	pd    bool
 	oa    bool
@@ -140,11 +141,17 @@ func (ht *HashTable) Insert(ka []byte) {
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
 			//fmt.Printf("Insert: ins idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
 			if Trace {
-				fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "I", "t", 0, "b", idx, "s", 0, "v", btoi(k))
+				fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
+					"i", ht.Tcnt, "l", cnt, "op", "I", "t", 0, "b", idx, "s", 0, "k", btoi(k), "v", btoi(k))
+				ht.Tcnt++
 				//fmt.Printf("len(ht.tbs)=%d\n", ht.tbs)
-				for _, tbs := range ht.tbs {
-					fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "U", "t", tbs.t, "b", tbs.b, "s", tbs.s, "v", btoi(k))
-				}
+				/*
+					for _, _ := range ht.tbs {
+								fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
+									"i", ht.Tcnt, "l", cnt, "op", "U", "t", tbs.t, "b", tbs.b, "s", tbs.s, "k", btoi(k), "v", btoi(k))
+							ht.Tcnt++
+					}
+				*/
 				ht.tbs = nil
 			}
 			ht.Probes++
@@ -153,16 +160,19 @@ func (ht *HashTable) Insert(ka []byte) {
 		}
 		if ht.oa {
 			//fmt.Printf("Insert: col idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
-			if Trace {
-				fmt.Printf("{%q: %q, %q: %d, %q: %d, %q: %d, %q: %v},\n", "op", "H", "t", 0, "b", idx, "s", 0, "v", btoi(k))
-				ht.tbs = append(ht.tbs, TBS{0, int(idx), 0})
-			}
 			if cnt == 0 {
-				ht.Cols++
-			} else {
 				ht.Probes++
+			} else {
+				ht.Cols++
 			}
-
+			if Trace {
+				/*
+					ht.tbs = append(ht.tbs, TBS{0, int(idx), 0})
+				*/
+				fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
+					"i", ht.Tcnt, "l", cnt, "op", "P", "t", 0, "b", idx, "s", 0, "k", btoi(k), "v", btoi(k))
+				ht.Tcnt++
+			}
 			// check for a duplicate key
 			bh := hashf.Hashf(ht.Buckets[idx][0].Key, ht.Seed)
 			if bh == h {
