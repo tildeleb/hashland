@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	cr "crypto/rand"
 	"crypto/sha1"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"leb.io/hashland/nhash"
 	"leb.io/hashland/smhasher"
 	"leb.io/hrff"
+	_ "math"
 	"math/rand"
 	"os"
 	"sort"
@@ -75,7 +77,7 @@ func Test0(file string, lines int, hf2 string) (ht *HashTable) {
 	var countlines = func(line string) {
 		cnt++
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, countlines)
 	stop := time.Now()
@@ -97,7 +99,7 @@ func TestA(file string, lines int, hf2 string) (ht *HashTable) {
 	//fmt.Printf("\t%20q: ", hf2)
 	//fmt.Printf("run: file=%q\n", file)
 	//fmt.Printf("TestA: lines=%d, hf2=%q\n", lines, hf2)
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	//fmt.Printf("ht=%v\n", ht)
 	start := time.Now()
 	ReadFile(file, addLine)
@@ -111,7 +113,7 @@ func TestB(file string, lines int, hf2 string) (ht *HashTable) {
 		line += "\n"
 		ht.Insert([]byte(line))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -124,7 +126,7 @@ func TestC(file string, lines int, hf2 string) (ht *HashTable) {
 		line += line + "\n\n\n\n"
 		ht.Insert([]byte(line))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -137,7 +139,7 @@ func TestD(file string, lines int, hf2 string) (ht *HashTable) {
 		line = "ABCDE" + line
 		ht.Insert([]byte(line))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -150,7 +152,7 @@ func TestE(file string, lines int, hf2 string) (ht *HashTable) {
 		line = line + line
 		ht.Insert([]byte(line))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -163,7 +165,7 @@ func TestF(file string, lines int, hf2 string) (ht *HashTable) {
 		line = line + line + line + line
 		ht.Insert([]byte(line))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -184,7 +186,7 @@ func TestG(file string, lines int, hf2 string) (ht *HashTable) {
 		//fmt.Printf("line=%q, line2=%q", line, line2)
 		ht.Insert([]byte(line2))
 	}
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	ReadFile(file, addLine)
 	stop := time.Now()
@@ -203,7 +205,7 @@ func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 	//test := []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
 
 	genWords(letters, counter)
-	ht = NewHashTable(cnt, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(cnt, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	genWords(letters, addWord)
 	stop := time.Now()
@@ -213,12 +215,13 @@ func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 
 // integers 0 to n
 func TestI(file string, lines int, hf2 string) (ht *HashTable) {
+	//r = rand.New(rand.NewSource(int64(bseed)))
 	//fmt.Printf("ni=%d\n", *ni)
 	bs := make([]byte, 4, 4)
 	if *dru {
 		*n = -*n
 	}
-	ht = NewHashTable(*n, *extra, *pd, *oa, *prime) // ??? @@@
+	ht = NewHashTable(*n, seed, *extra, *pd, *oa, *prime) // ??? @@@
 	start := time.Now()
 	for i := 0; i < *ni; i++ {
 		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
@@ -236,7 +239,7 @@ func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	keys := length * 8
 	key := make([]byte, length, length)
 	key = key[:]
-	ht = NewHashTable(keys, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(keys, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
 	for k := range key {
 		for i := uint(0); i < 8; i++ {
@@ -278,10 +281,14 @@ func hexToBytes(s string) []byte {
 	return data[0 : len(s)/2]
 }
 
-var r = rand.Float64
+var r *rand.Rand
+
+func newRand(seed int64) {
+	r = rand.New(rand.NewSource(seed))
+}
 
 func rbetween(a uint64, b uint64) uint64 {
-	rf := r()
+	rf := r.Float64()
 	diff := float64(b - a + 1)
 	r2 := rf * diff
 	r3 := r2 + float64(a)
@@ -291,7 +298,7 @@ func rbetween(a uint64, b uint64) uint64 {
 }
 
 func TestK(file string, lines int, hf2 string) (ht *HashTable) {
-	var seed uint64
+	var aseed uint64
 	var rseed uint64
 	var b = make([]byte, 1000, 1000)
 	var hashLine = func(line string) {
@@ -301,9 +308,9 @@ func TestK(file string, lines int, hf2 string) (ht *HashTable) {
 		fmt.Printf("\t\tseed=%d, key=%x, hash=0x%x\n", rseed, b, h)
 	}
 	fmt.Printf("\n")
-	ht = NewHashTable(lines, *extra, *pd, *oa, *prime)
+	ht = NewHashTable(lines, seed, *extra, *pd, *oa, *prime)
 	start := time.Now()
-	for seed = 0; seed < uint64(*ns); seed++ {
+	for aseed = 0; aseed < uint64(*ns); aseed++ {
 		rseed = rbetween(0, uint64(1)<<63)
 		ReadFile(file, hashLine)
 	}
@@ -677,6 +684,10 @@ var prime = flag.Bool("p", false, "table size is primes and use mod")
 var all = flag.Bool("a", false, "run all tests")
 var pd = flag.Bool("pd", false, "print duplicate hashes")
 var oa = flag.Bool("oa", false, "open addressing (no buckets)")
+var s = flag.Int("s", 0, "seed for random number gen.")
+var rr = flag.Bool("rr", false, "random run, i.e. random hash seed")
+
+var seed int64
 
 var c = flag.Bool("c", false, "only test crypto hash functions")
 var h32 = flag.Bool("h32", false, "only test 32 bit has functions")
@@ -751,6 +762,22 @@ func main() {
 	if *hcb {
 		*b = true
 	}
+
+	if *rr {
+		seed = time.Now().UTC().UnixNano()
+		// fixed pattern or different values each time
+		b := make([]byte, 8)
+		_, err := cr.Read(b)
+		if err != nil {
+			fmt.Println("error:", err)
+			return
+		}
+		seed = int64(uint64(b[0])<<56 | uint64(b[1])<<48 | uint64(b[2])<<40 | uint64(b[3])<<32 |
+			uint64(b[4])<<24 | uint64(b[5])<<16 | uint64(b[6])<<8 | uint64(b[7])<<0)
+	} else {
+		seed = int64(*s)
+	}
+	newRand(seed)
 	//fmt.Printf("%d lines read\n", lines)
 
 	// read file and count lines

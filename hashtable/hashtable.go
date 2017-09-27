@@ -15,15 +15,16 @@ type Bucket struct {
 }
 
 type Stats struct {
-	Inserts  int
-	Cols     int
-	Probes   int
-	Heads    int
-	Dups     int
-	Nbuckets int
-	Entries  int
-	Q        float64
-	Dur      time.Duration
+	Inserts      int
+	Cols         int
+	Probes       int
+	Heads        int
+	Dups         int
+	Nbuckets     int
+	Entries      int
+	LongestChain int
+	Q            float64
+	Dur          time.Duration
 	//
 	Lines    int
 	Size     uint64
@@ -86,7 +87,7 @@ func NextLog2(x uint32) uint32 {
 	return n + x
 }
 
-func NewHashTable(size, extra int, pd, oa, prime bool) *HashTable {
+func NewHashTable(size int, seed int64, extra int, pd, oa, prime bool) *HashTable {
 	ht := new(HashTable)
 	ht.Lines = size
 	ht.extra = extra
@@ -100,6 +101,7 @@ func NewHashTable(size, extra int, pd, oa, prime bool) *HashTable {
 	if prime {
 		ht.Size = uint64(primes.NextPrime(int(ht.Size)))
 	}
+	ht.Seed = uint64(seed)
 	ht.pd = pd
 	ht.oa = oa
 	ht.SizeMask = ht.Size - 1
@@ -207,6 +209,14 @@ func (ht *HashTable) Insert(ka []byte) {
 			}
 			// add element
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
+			if len(ht.Buckets[idx]) > ht.LongestChain {
+				ht.LongestChain = len(ht.Buckets[idx])
+			}
+			if Trace {
+				fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
+					"i", ht.Tcnt, "l", cnt, "op", "I", "t", len(ht.Buckets[idx])-1, "b", idx, "s", 0, "k", btoi(k), "v", btoi(k))
+				ht.Tcnt++
+			}
 			ht.Nbuckets++
 			ht.Probes++
 			break
@@ -273,9 +283,9 @@ func (s *HashTable) Print() {
 				panic("runTestsWithFileAndHashes")
 			}
 		*/
-		fmt.Printf("size=%h, inserts=%04.2h, buckets=%04.2h, newBuckets=%04.2h, dups=%d, q=%0.2f, time=%0.2f%s\n",
+		fmt.Printf("size=%h, inserts=%04.2h, buckets=%04.2h, newBuckets=%04.2h, LongestChain=%d, dups=%d, q=%0.2f, time=%0.2f%s\n",
 			hrff.Int64{int64(s.Size), ""}, hrff.Float64{float64(s.Inserts), ""}, hrff.Float64{float64(s.Nbuckets), ""},
-			hrff.Float64{float64(s.Nbuckets - int(s.Size)), ""},
+			hrff.Float64{float64(s.LongestChain), ""}, hrff.Float64{float64(s.Nbuckets - int(s.Size)), ""},
 			s.Dups, q, t, units)
 	}
 }
