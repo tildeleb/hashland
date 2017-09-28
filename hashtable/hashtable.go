@@ -15,14 +15,14 @@ type Bucket struct {
 }
 
 type Stats struct {
-	Inserts      int
-	Cols         int
-	Probes       int
-	Heads        int
-	Dups         int
-	Nbuckets     int
+	Inserts      int // number of elements inserted
+	Cols         int // number of collisions
+	Probes       int // number of probes
+	Heads        int // number of chains > 1
+	Dups         int // number of dup keys
+	Nbuckets     int // number of new buckets added
 	Entries      int
-	LongestChain int
+	LongestChain int // longest chain of entries
 	Q            float64
 	Dur          time.Duration
 	//
@@ -107,7 +107,7 @@ func NewHashTable(size int, seed int64, extra int, pd, oa, prime bool) *HashTabl
 	ht.SizeMask = ht.Size - 1
 	ht.Buckets = make([][]Bucket, ht.Size, ht.Size)
 
-	ht.Nbuckets = int(ht.Size)
+	//ht.Nbuckets = int(ht.Size)
 	return ht
 }
 
@@ -210,6 +210,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			// add element
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
 			if len(ht.Buckets[idx]) > ht.LongestChain {
+				//fmt.Printf("len(ht.Buckets[idx])=%d, ht.LongestChain=%d\n", len(ht.Buckets[idx]), ht.LongestChain)
 				ht.LongestChain = len(ht.Buckets[idx])
 			}
 			if Trace {
@@ -283,9 +284,9 @@ func (s *HashTable) Print() {
 				panic("runTestsWithFileAndHashes")
 			}
 		*/
-		fmt.Printf("size=%h, inserts=%04.2h, buckets=%04.2h, newBuckets=%04.2h, LongestChain=%d, dups=%d, q=%0.2f, time=%0.2f%s\n",
-			hrff.Int64{int64(s.Size), ""}, hrff.Float64{float64(s.Inserts), ""}, hrff.Float64{float64(s.Nbuckets), ""},
-			hrff.Float64{float64(s.LongestChain), ""}, hrff.Float64{float64(s.Nbuckets - int(s.Size)), ""},
-			s.Dups, q, t, units)
+		//fmt.Printf("%#v\n", s)
+		fmt.Printf("size=%h, inserts=%h, heads=%h, newBuckets=%h, LongestChain=%h, dups=%d, q=%0.2f, time=%0.2f%s\n",
+			hrff.Int64{int64(s.Size), ""}, hrff.Int64{int64(s.Inserts), ""}, hrff.Int64{int64(s.Heads), ""},
+			hrff.Int64{int64(s.Nbuckets), ""}, hrff.Int64{int64(s.LongestChain), ""}, s.Dups, q, t, units)
 	}
 }

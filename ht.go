@@ -670,6 +670,9 @@ func runTestsWithFileAndHashes(file string, lines int, hf []string) {
 				}
 				fmt.Printf("\t%20q: ", Hf2)
 				ht := test.ptf(file, lines, Hf2)
+				if *rr || *s != 0 {
+					fmt.Printf("seed=%#016x\n", seed)
+				}
 				ht.Print()
 			}
 		}

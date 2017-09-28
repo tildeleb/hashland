@@ -264,7 +264,11 @@ func Hashf(k []byte, seed uint64) (h uint64) {
 	case "gomap32":
 		h = uint64(gomap.Hash32(k, uint32(seed)))
 	case "aeshash64":
+		//fmt.Printf("k=%v\n", k)
 		h = aeshash.Hash(k, seed)
+	case "aeshash32I":
+		//fmt.Printf("k=%v\n", k)
+		h = aeshash.Hash64(uint64(k[0])<<24|uint64(k[1])<<16|uint64(k[2])<<8|uint64(k[3])<<0, seed)
 	case "aeshash64I":
 		h = aeshash.Hash64(uint64(k[0])<<56|uint64(k[1])<<48|uint64(k[2])<<40|uint64(k[3])<<32|uint64(k[4])<<24|uint64(k[5])<<16|uint64(k[6])<<8|uint64(k[7])<<0, seed)
 	case "adler32":
