@@ -156,7 +156,7 @@ var HashFunctions = map[string]HashFunction{
 // 	"skein256xor", "skein256low", "skein256hi", "sha1", "keccak160l",
 // 	"siphash64", "siphash128a", "siphash128b",
 // 	"keccak644", "keccak648" "keccak160",
-var TestHashFunctions = []string{"nullhash", "perfecthash",
+var TestHashFunctions = []string{"nullhash", //"perfecthash",
 	"aeshash64", "gomap64", "j364", "j264", "murmur364",
 	"siphash64",
 	"siphash64pg",
@@ -248,7 +248,7 @@ func Hashf(k []byte, seed uint64) (h uint64) {
 	*/
 	switch Hf2 {
 	case "perfecthash":
-		//fmt.Printf("k=%v\n", k)
+		fmt.Printf("k=%v\n", k)
 		//h = uint64(k[0])<<56 | uint64(k[1])<<48 | uint64(k[2])<<40 | uint64(k[3])<<32 | uint64(k[4])<<24 | uint64(k[5])<<16 | uint64(k[6])<<8 | uint64(k[7])<<0
 		//h = uint64(k[7])<<56 | uint64(k[6])<<48 | uint64(k[5])<<40 | uint64(k[4])<<32 | uint64(k[3])<<24 | uint64(k[2])<<16 | uint64(k[1])<<8 | uint64(k[0])<<0
 		h = uint64(k[3])<<24 | uint64(k[2])<<16 | uint64(k[1])<<8 | uint64(k[0])<<0

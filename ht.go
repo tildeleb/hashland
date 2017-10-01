@@ -254,6 +254,38 @@ func TestJ(file string, lines int, hf2 string) (ht *HashTable) {
 	return
 }
 
+// all possible 3 bytes keys must have distinct hashses
+func TestL(file string, lines int, hf2 string) (ht *HashTable) {
+	type HashSet struct {
+		m map[uint64]struct{} // set of hashes added
+		n int                 // number of hashes added
+	}
+	hs := &HashSet{make(map[uint64]struct{}), 0}
+	key := make([]byte, 3, 3)
+	key = key[:]
+	ht = NewHashTable(256*256*256, seed, *extra, *pd, *oa, *prime)
+	start := time.Now()
+	for i := 0; i < 256; i++ {
+		for j := 0; j < 256; j++ {
+			for k := 0; k < 256; k++ {
+				key[0] = byte(i)
+				key[1] = byte(j)
+				key[2] = byte(k)
+				h := Hashf(key, ht.Seed)
+				hs.m[h] = struct{}{}
+				hs.n++
+				//fmt.Printf("i=%d, j=%d, k=%d, key=%#v\n", i, j, k, key)
+				ht.Insert(key)
+			}
+		}
+	}
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
+	ht.Dups2 = hs.n - len(hs.m)
+	//fmt.Printf("collisions=%d\n", ht.Dups2)
+	return
+}
+
 func unhex(c byte) uint8 {
 	switch {
 	case '0' <= c && c <= '9':
@@ -639,6 +671,7 @@ var Tests = []Test{
 	{"TestI", &I, TestI, "integers from 0 to ni-1 (does not read file)"},
 	{"TestJ", &J, TestJ, "one bit keys (does not read file)"},
 	{"TestK", &K, TestK, "read file of keys and print hashes"},
+	{"TestL", &L, TestL, "all possible 3 byte keys"},
 }
 
 func runTestsWithFileAndHashes(file string, lines int, hf []string) {
@@ -726,17 +759,18 @@ var H = flag.Bool("H", false, "test H")
 var I = flag.Bool("I", false, "test I")
 var J = flag.Bool("J", false, "test J")
 var K = flag.Bool("K", false, "test K")
+var L = flag.Bool("L", false, "test L")
 var S = flag.Bool("S", false, "test S")
 
 var letters = []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K}
+var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K, &L}
 
 func allTestsOn() {
-	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J = true, true, true, true, true, true, true, true, true, true
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L = true, true, true, true, true, true, true, true, true, true, true
 }
 
 func allTestsOff() {
-	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J = false, false, false, false, false, false, false, false, false, false
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L = false, false, false, false, false, false, false, false, false, false, false
 }
 
 func main() {

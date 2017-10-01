@@ -19,7 +19,8 @@ type Stats struct {
 	Cols         int // number of collisions
 	Probes       int // number of probes
 	Heads        int // number of chains > 1
-	Dups         int // number of dup keys
+	Dups         int // number of dup hashes on the same chain
+	Dups2        int // number of dup hashes
 	Nbuckets     int // number of new buckets added
 	Entries      int
 	LongestChain int // longest chain of entries
@@ -115,6 +116,24 @@ func btoi(b []byte) int {
 	return int(b[3])<<24 | int(b[2])<<16 | int(b[1])<<8 | int(b[0])
 }
 
+var ph uint64
+
+var Ones = [16]int{0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4}
+var Zeros = [16]int{4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0}
+
+func diff(d uint64) (zeros int, ones int) {
+	for i := 0; i < 16; i++ {
+		four := d & 0xF
+		zeros += Zeros[four]
+		ones += Ones[four]
+		d = d >> 4
+	}
+	if zeros+ones != 64 {
+		panic("diff")
+	}
+	return
+}
+
 func (ht *HashTable) Insert(ka []byte) {
 	k := make([]byte, len(ka), len(ka))
 	k = k[:]
@@ -141,7 +160,9 @@ func (ht *HashTable) Insert(ka []byte) {
 		if ht.Buckets[idx] == nil {
 			// no entry or chain at this location, make it
 			ht.Buckets[idx] = append(ht.Buckets[idx], Bucket{Key: k})
-			//fmt.Printf("Insert: ins idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			//fmt.Printf("Insert: ins idx=%d, len=%d, hash=%#016x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			//z, o := diff(h)
+			//fmt.Printf("%02d %02d %#064b z=%02d o=%02d", btoi(k), idx, h, z, o)
 			if Trace {
 				fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
 					"i", ht.Tcnt, "l", cnt, "op", "I", "t", 0, "b", idx, "s", 0, "k", btoi(k), "v", btoi(k))
@@ -158,7 +179,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			}
 			ht.Probes++
 			ht.Heads++
-			return
+			break
 		}
 		if ht.oa {
 			//fmt.Printf("Insert: col idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
@@ -197,7 +218,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			// first scan slice for dups
 			for j := range ht.Buckets[idx] {
 				bh := hashf.Hashf(ht.Buckets[idx][j].Key, ht.Seed)
-				//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, ht.Buckets[idx][j].Key)
+				//fmt.Printf("idx=%d, j=%d/%d, bh=%#016x, h=%#016x, key=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, ht.Buckets[idx][j].Key)
 				if bh == h {
 					if ht.pd {
 						//fmt.Printf("idx=%d, j=%d/%d, bh=0x%08x, h=0x%08x, key=%q, bkey=%q\n", idx, j, len(ht.Buckets[idx]), bh, h, k, ht.Buckets[idx][j].Key)
@@ -213,6 +234,8 @@ func (ht *HashTable) Insert(ka []byte) {
 				//fmt.Printf("len(ht.Buckets[idx])=%d, ht.LongestChain=%d\n", len(ht.Buckets[idx]), ht.LongestChain)
 				ht.LongestChain = len(ht.Buckets[idx])
 			}
+			//z, o := diff(h)
+			//fmt.Printf("%02d %02d %#064b z=%02d o=%02d", btoi(k), idx, h, z, o)
 			if Trace {
 				fmt.Printf("{%q: %d, %q: %d, %q: %q, %q: %d, %q: %d, %q: %d, %q: %v, %q: %v},\n",
 					"i", ht.Tcnt, "l", cnt, "op", "I", "t", len(ht.Buckets[idx])-1, "b", idx, "s", 0, "k", btoi(k), "v", btoi(k))
@@ -223,6 +246,14 @@ func (ht *HashTable) Insert(ka []byte) {
 			break
 		}
 	}
+	if ph != 0 {
+		//xor := h ^ ph
+		//z, o := diff(xor)
+		//fmt.Printf(" xor=%#064b z=%02d o=%02d\n", xor, z, o)
+	} else {
+		//fmt.Printf("\n")
+	}
+	ph = h
 }
 
 // The theoretical metric from "Red Dragon Book"
@@ -285,8 +316,8 @@ func (s *HashTable) Print() {
 			}
 		*/
 		//fmt.Printf("%#v\n", s)
-		fmt.Printf("size=%h, inserts=%h, heads=%h, newBuckets=%h, LongestChain=%h, dups=%d, q=%0.2f, time=%0.2f%s\n",
+		fmt.Printf("size=%h, inserts=%h, heads=%h, newBuckets=%h, LongestChain=%h, dups=%d, dups2=%d, q=%0.2f, time=%0.2f%s\n",
 			hrff.Int64{int64(s.Size), ""}, hrff.Int64{int64(s.Inserts), ""}, hrff.Int64{int64(s.Heads), ""},
-			hrff.Int64{int64(s.Nbuckets), ""}, hrff.Int64{int64(s.LongestChain), ""}, s.Dups, q, t, units)
+			hrff.Int64{int64(s.Nbuckets), ""}, hrff.Int64{int64(s.LongestChain), ""}, s.Dups, s.Dups2, q, t, units)
 	}
 }
