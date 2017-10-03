@@ -7,6 +7,8 @@ import (
 	"fmt"
 	farm "github.com/dgryski/go-farm"
 	metro "github.com/dgryski/go-metro"
+	"github.com/jzelinskie/whirlpool"
+	"github.com/minio/blake2b-simd"
 	"hash"
 	"hash/adler32"
 	"leb.io/aeshash"
@@ -26,7 +28,6 @@ import (
 	"leb.io/hashland/spooky"
 	"time"
 	"unsafe"
-	//"leb.io/hashland/threefish"
 )
 
 // interfaces
@@ -43,6 +44,8 @@ var sha1160 hash.Hash
 var m332 hash.Hash32
 var m364 hash.Hash64
 var m3128 murmur3.Hash128
+var wp hash.Hash
+var b2b hash.Hash
 
 // functions
 var j264 = jenkins.Hash264
@@ -146,6 +149,10 @@ var HashFunctions = map[string]HashFunction{
 	"skein256hi":  HashFunction{"skein256hi", 32, true, "skein256hi", nil},
 	"skein256xor": HashFunction{"skein256xor", 32, true, "skein256xor", nil},
 
+	"whirlpool": HashFunction{"whirlpool", 64, true, "whirlpool", nil},
+	"blake2b":   HashFunction{"blake2b", 64, true, "blake2b", nil},
+
+	// so bad we can't include them
 	"CrapWow": HashFunction{"CrapWow", 32, false, "CrapWow", nil},
 	"adler32": HashFunction{"adler32", 32, false, "adler32", nil},
 }
@@ -169,7 +176,7 @@ var TestHashFunctions = []string{"nullhash", //"perfecthash",
 	"MetroHash64-1", "MetroHash64-2",
 	"MetroHash128-1l", "MetroHash128-1h", "MetroHash128-1xor",
 	"MetroHash128-2l", "MetroHash128-2h", "MetroHash128-2xor",
-	"sha1", "keccakpg643", "keccak224", "skein256",
+	"sha1", "keccakpg643", "keccak224", "skein256", "whirlpool", "blake2b",
 }
 
 type hf32 func(b []byte, seed uint32) uint32
@@ -210,10 +217,12 @@ func Halloc(hfs string) (hf32 nhash.HashF32) {
 	return
 }
 
+// fingerprints are stored in these globals to take the allocation out of the loop
 var fp8 = make([]byte, 8, 8)
 var fp20 = make([]byte, 20, 20)
 var fp28 = make([]byte, 28, 28)
 var fp32 = make([]byte, 32, 32)
+var fp64 = make([]byte, 64, 64)
 
 var seeds []byte = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 
@@ -424,53 +433,71 @@ func Hashf(k []byte, seed uint64) (h uint64) {
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
 	case "keccakpg160":
-		fp := make([]byte, 32)
-		fp = fp[0:0]
+		fp32 = fp32[0:0]
 		k160.Reset()
 		k160.Write(k)
-		fp = k160.Sum(fp)
+		fp32 = k160.Sum(fp32)
 		//fmt.Printf("keccak160xor: fp=%v\n", fp)
 		if false {
-			low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
-			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
-			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
-			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
+			low := fp32[0] ^ fp32[4] ^ fp32[8] ^ fp32[12] ^ fp32[16]
+			med := fp32[1] ^ fp32[5] ^ fp32[9] ^ fp32[13] ^ fp32[17]
+			hii := fp32[2] ^ fp32[6] ^ fp32[10] ^ fp32[14] ^ fp32[18]
+			top := fp32[3] ^ fp32[7] ^ fp32[11] ^ fp32[15] ^ fp32[19]
 			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+			h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+				uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
 		}
 	case "skein256xor":
-		fp := make([]byte, 32)
-		fp = fp[0:0]
+		fp32 = fp32[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = skein256.Sum(fp)
+		fp32 = skein256.Sum(fp32)
 		//fmt.Printf("skein256: fp=%v\n", fp)
 		if true {
-			low := fp[0] ^ fp[4] ^ fp[8] ^ fp[12] ^ fp[16]
-			med := fp[1] ^ fp[5] ^ fp[9] ^ fp[13] ^ fp[17]
-			hii := fp[2] ^ fp[6] ^ fp[10] ^ fp[14] ^ fp[18]
-			top := fp[3] ^ fp[7] ^ fp[11] ^ fp[15] ^ fp[19]
+			low := fp32[0] ^ fp32[4] ^ fp32[8] ^ fp32[12] ^ fp32[16]
+			med := fp32[1] ^ fp32[5] ^ fp32[9] ^ fp32[13] ^ fp32[17]
+			hii := fp32[2] ^ fp32[6] ^ fp32[10] ^ fp32[14] ^ fp32[18]
+			top := fp32[3] ^ fp32[7] ^ fp32[11] ^ fp32[15] ^ fp32[19]
 			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
 		} else {
-			h = uint64(uint32(fp[0])<<24 | uint32(fp[1])<<16 | uint32(fp[2])<<8 | uint32(fp[3]))
+			h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+				uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
 		}
 	case "skein256":
-		fp := make([]byte, 32)
-		fp = fp[0:0]
+		fp32 = fp32[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = skein256.Sum(fp)
+		fp32 = skein256.Sum(fp32)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-		h = uint64(fp[0])<<56 | uint64(fp[1])<<48 | uint64(fp[2])<<40 | uint64(fp[3])<<32 | uint64(fp[4])<<24 | uint64(fp[5])<<16 | uint64(fp[6])<<8 | uint64(fp[7])<<0
+		h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+			uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
 	case "skein256hi":
-		fp := make([]byte, 32)
-		fp = fp[0:0]
+		fp32 = fp32[0:0]
 		skein256.Reset()
 		skein256.Write(k)
-		fp = skein256.Sum(fp)
+		fp32 = skein256.Sum(fp32)
 		//fmt.Printf("skein256: fp=%v\n", fp)
-		h = uint64(uint32(fp[28])<<24 | uint32(fp[29])<<16 | uint32(fp[30])<<8 | uint32(fp[31]))
+		h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+			uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+	case "whirlpool":
+		fp64 = fp64[0:0]
+		wp.Reset()
+		wp.Write(k)
+		fp64 = wp.Sum(fp64)
+		//fmt.Printf("whirlpool: fp=%v\n", fp)
+		h = uint64(fp64[0])<<56 | uint64(fp64[1])<<48 | uint64(fp64[2])<<40 | uint64(fp64[3])<<32 |
+			uint64(fp64[4])<<24 | uint64(fp64[5])<<16 | uint64(fp64[6])<<8 | uint64(fp64[7])<<0
+		//fmt.Printf("whirlpool: h=%#016x\n", h)
+	case "blake2b":
+		fp32 = fp32[0:0]
+		b2b.Reset()
+		b2b.Write(k)
+		fp32 = b2b.Sum(fp32)
+		//fmt.Printf("blake2b: fp=%v\n", fp)
+		h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+			uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+		//fmt.Printf("blake2b: h=%#016x\n", h)
 	case "sha1":
 		//fp := make([]byte, 20)
 		//fp = fp[0:0]
@@ -508,5 +535,7 @@ func init() {
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()
 	a32 = adler32.New()
+	wp = whirlpool.New()
+	b2b = blake2b.New256()
 	//HashFunctions["keccak224"].hf = k224
 }
