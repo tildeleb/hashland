@@ -36,7 +36,7 @@ import (
 	"hash"
 	// "crypto/threefish"
 	//"leb/habu/crypto/threefish"
-	"leb.io/hashland/threefish"
+	"github.com/tildeleb/hashland/threefish"
 	"strconv"
 )
 

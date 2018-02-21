@@ -8,8 +8,8 @@ package jenkins
 
 import (
 	"fmt"
+	"github.com/tildeleb/hashland/nhash"
 	"hash"
-	"leb.io/hashland/nhash"
 	"unsafe"
 )
 

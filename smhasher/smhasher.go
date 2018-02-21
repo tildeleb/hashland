@@ -6,7 +6,7 @@ package smhasher
 
 import (
 	"fmt"
-	"leb.io/hashland/hashf"
+	"github.com/tildeleb/hashland/hashf"
 	"math"
 	"math/rand"
 	"strings"
