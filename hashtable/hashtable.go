@@ -5,8 +5,8 @@ package hashtable
 import (
 	"fmt"
 	"github.com/tildeleb/cuckoo/primes"
-	"leb.io/hashland/hashf"
-	"leb.io/hrff"
+	"github.com/tildeleb/hashland/hashf"
+	"github.com/tildeleb/hrff"
 	"time"
 )
 

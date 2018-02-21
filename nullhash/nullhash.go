@@ -1,8 +1,8 @@
 package nullhash
 
 import (
+	"github.com/tildeleb/hashland/nhash"
 	"hash"
-	"leb.io/hashland/nhash"
 )
 
 func Nullhash(b []byte, seed uint64) uint64 {

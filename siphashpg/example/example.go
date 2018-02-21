@@ -21,8 +21,8 @@ package main
 import "flag"
 import "fmt"
 import "time"
-import "leb.io/hashes/siphash"
-import "leb.io/hrff"
+import "github.com/tildeleb/hashes/siphash"
+import "github.com/tildeleb/hrff"
 
 var tv64 = [][]byte{
 	{0x31, 0x0e, 0x0e, 0xdd, 0x47, 0xdb, 0x6f, 0x72},

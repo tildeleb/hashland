@@ -3,7 +3,7 @@
 package crapwow
 
 import (
-	"leb.io/hashland/nhash"
+	"github.com/tildeleb/hashland/nhash"
 	"unsafe"
 )
 
