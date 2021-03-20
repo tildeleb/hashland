@@ -13,7 +13,6 @@ import (
 	"github.com/jzelinskie/whirlpool"
 	"github.com/minio/blake2b-simd"
 	"leb.io/aeshash"
-	"leb.io/hashes/skein"
 	"leb.io/hashland/crapwow"
 	"leb.io/hashland/farm"
 	"leb.io/hashland/gomap"
@@ -40,7 +39,7 @@ var k644 hash.Hash
 var k648 hash.Hash
 var k160 hash.Hash
 var k224 hash.Hash
-var skein256 hash.Hash
+var //256 hash.Hash
 var sha1160 hash.Hash
 var m332 hash.Hash32
 var m364 hash.Hash64
@@ -142,13 +141,13 @@ var HashFunctions = map[string]HashFunction{
 	"keccakpg643": HashFunction{"keccak643", 64, true, "keccak, 64 bit, 3 rounds", nil},
 	"keccakpg644": HashFunction{"keccak644", 64, true, "keccak, 64 bit, 4 rounds", nil},
 	"keccakpg648": HashFunction{"keccak648", 64, true, "keccak, 64 bit, 8 rounds", nil},
-	"skein256":    HashFunction{"skein256", 64, true, "skein256, 64 bit , low 64 bits", nil},
+	//"skein256":    HashFunction{"skein256", 64, true, "skein256, 64 bit , low 64 bits", nil},
 	"sha1":        HashFunction{"sha1", 64, true, "sha1, 160 bit hash", nil},
 	"keccak160":   HashFunction{"keccak160", 64, true, "keccak160l", nil},
 
-	"skein256low": HashFunction{"skein256low", 32, true, "skein256low", nil},
-	"skein256hi":  HashFunction{"skein256hi", 32, true, "skein256hi", nil},
-	"skein256xor": HashFunction{"skein256xor", 32, true, "skein256xor", nil},
+	//"skein256low": HashFunction{"skein256low", 32, true, "skein256low", nil},
+	//"skein256hi":  HashFunction{"skein256hi", 32, true, "skein256hi", nil},
+	//"skein256xor": HashFunction{"skein256xor", 32, true, "skein256xor", nil},
 
 	"whirlpool": HashFunction{"whirlpool", 64, true, "whirlpool", nil},
 	"blake2b":   HashFunction{"blake2b", 64, true, "blake2b", nil},
@@ -445,38 +444,40 @@ func Hashf(k []byte, seed uint64) (h uint64) {
 			h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
 				uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
 		}
-	case "skein256xor":
-		fp32 = fp32[0:0]
-		skein256.Reset()
-		skein256.Write(k)
-		fp32 = skein256.Sum(fp32)
-		//fmt.Printf("skein256: fp=%v\n", fp)
-		if true {
-			low := fp32[0] ^ fp32[4] ^ fp32[8] ^ fp32[12] ^ fp32[16]
-			med := fp32[1] ^ fp32[5] ^ fp32[9] ^ fp32[13] ^ fp32[17]
-			hii := fp32[2] ^ fp32[6] ^ fp32[10] ^ fp32[14] ^ fp32[18]
-			top := fp32[3] ^ fp32[7] ^ fp32[11] ^ fp32[15] ^ fp32[19]
-			h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
-		} else {
-			h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
-				uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
-		}
-	case "skein256":
-		fp32 = fp32[0:0]
-		skein256.Reset()
-		skein256.Write(k)
-		fp32 = skein256.Sum(fp32)
-		//fmt.Printf("skein256: fp=%v\n", fp)
-		h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
-			uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
-	case "skein256hi":
-		fp32 = fp32[0:0]
-		skein256.Reset()
-		skein256.Write(k)
-		fp32 = skein256.Sum(fp32)
-		//fmt.Printf("skein256: fp=%v\n", fp)
-		h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
-			uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+		/*
+			case "skein256xor":
+				fp32 = fp32[0:0]
+				skein256.Reset()
+				skein256.Write(k)
+				fp32 = skein256.Sum(fp32)
+				//fmt.Printf("skein256: fp=%v\n", fp)
+				if true {
+					low := fp32[0] ^ fp32[4] ^ fp32[8] ^ fp32[12] ^ fp32[16]
+					med := fp32[1] ^ fp32[5] ^ fp32[9] ^ fp32[13] ^ fp32[17]
+					hii := fp32[2] ^ fp32[6] ^ fp32[10] ^ fp32[14] ^ fp32[18]
+					top := fp32[3] ^ fp32[7] ^ fp32[11] ^ fp32[15] ^ fp32[19]
+					h = uint64(uint32(top)<<24 | uint32(hii)<<16 | uint32(med)<<8 | uint32(low))
+				} else {
+					h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+						uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+				}
+			case "skein256":
+				fp32 = fp32[0:0]
+				skein256.Reset()
+				skein256.Write(k)
+				fp32 = skein256.Sum(fp32)
+				//fmt.Printf("skein256: fp=%v\n", fp)
+				h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+					uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+			case "skein256hi":
+				fp32 = fp32[0:0]
+				skein256.Reset()
+				skein256.Write(k)
+				fp32 = skein256.Sum(fp32)
+				//fmt.Printf("skein256: fp=%v\n", fp)
+				h = uint64(fp32[0])<<56 | uint64(fp32[1])<<48 | uint64(fp32[2])<<40 | uint64(fp32[3])<<32 |
+					uint64(fp32[4])<<24 | uint64(fp32[5])<<16 | uint64(fp32[6])<<8 | uint64(fp32[7])<<0
+		*/
 	case "whirlpool":
 		fp64 = fp64[0:0]
 		wp.Reset()
@@ -528,7 +529,7 @@ func init() {
 	k648 = keccakpg.NewCustom(64, 8)
 	k160 = keccakpg.New160()
 	k224 = keccak.New224()
-	skein256 = skein.New256()
+	//skein256 = skein.New256()
 	//skein32 := skein.New(256, 32)
 	sha1160 = sha1.New()
 	a32 = adler32.New()

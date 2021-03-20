@@ -18,10 +18,13 @@ this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 package siphashpg_test
 
-import "testing"
-import "time"
-import "leb.io/hashes/siphash"
-import "leb.io/hrff"
+import (
+	"testing"
+	"time"
+
+	siphash "leb.io/hashland/siphashpg"
+	"leb.io/hrff"
+)
 
 var tv64 = [][]byte{
 	{0x31, 0x0e, 0x0e, 0xdd, 0x47, 0xdb, 0x6f, 0x72},

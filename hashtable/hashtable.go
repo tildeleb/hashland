@@ -4,10 +4,11 @@ package hashtable
 
 import (
 	"fmt"
-	"github.com/tildeleb/cuckoo/primes"
+	"time"
+
+	"leb.io/cuckoo/primes"
 	"leb.io/hashland/hashf"
 	"leb.io/hrff"
-	"time"
 )
 
 type Bucket struct {
