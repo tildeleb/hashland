@@ -39,7 +39,8 @@ var k644 hash.Hash
 var k648 hash.Hash
 var k160 hash.Hash
 var k224 hash.Hash
-var //256 hash.Hash
+
+//var skein256 hash.Hash
 var sha1160 hash.Hash
 var m332 hash.Hash32
 var m364 hash.Hash64
@@ -142,8 +143,8 @@ var HashFunctions = map[string]HashFunction{
 	"keccakpg644": HashFunction{"keccak644", 64, true, "keccak, 64 bit, 4 rounds", nil},
 	"keccakpg648": HashFunction{"keccak648", 64, true, "keccak, 64 bit, 8 rounds", nil},
 	//"skein256":    HashFunction{"skein256", 64, true, "skein256, 64 bit , low 64 bits", nil},
-	"sha1":        HashFunction{"sha1", 64, true, "sha1, 160 bit hash", nil},
-	"keccak160":   HashFunction{"keccak160", 64, true, "keccak160l", nil},
+	"sha1":      HashFunction{"sha1", 64, true, "sha1, 160 bit hash", nil},
+	"keccak160": HashFunction{"keccak160", 64, true, "keccak160l", nil},
 
 	//"skein256low": HashFunction{"skein256low", 32, true, "skein256low", nil},
 	//"skein256hi":  HashFunction{"skein256hi", 32, true, "skein256hi", nil},
