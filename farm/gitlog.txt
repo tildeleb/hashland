@@ -1,0 +1,104 @@
+commit d1e51a4af19092715f4ce7d8257fe5bc8f8be727
+Merge: 07065c3 61c3346
+Author: Damian Gryski <dmg@pobox.com>
+Date:   Wed Sep 9 19:09:13 2015 +0200
+
+    Merge pull request #1 from leventov/master
+    
+    Fix a bug in _uo
+
+commit 61c334626e2b0489e4edf083635dca4e58138ac2
+Author: Roman Leventov <leventov@ya.ru>
+Date:   Wed Sep 9 19:58:11 2015 +0300
+
+    Fix a bug in _uo
+
+commit 07065c3305f91265700d41b4c73b8b50c20b4a7e
+Author: Damian Gryski <damian@gryski.com>
+Date:   Fri Jun 5 05:57:53 2015 +0200
+
+    upgrade to farmhash v1.1
+
+commit fc41e106ee0e4394f69a56046e5c5adbaf29d912
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun Jun 1 22:03:37 2014 +0200
+
+    inline uint64 unpacking
+
+commit 13f1bc7abd99018d9775bab08e380588636b2160
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun Jun 1 22:02:38 2014 +0200
+
+    docs: link to cgo version
+
+commit 19a2bfa08edaa4286a2ad31b248e76e5ea220de9
+Author: Damian Gryski <damian@gryski.com>
+Date:   Mon May 26 20:47:29 2014 +0200
+
+    Remove uint128 from API -- we now match go-farmhash cgo bindings
+
+commit 613aa95d7a6c05995626a0137c1008c2c1f0a211
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun May 25 09:07:48 2014 +0200
+
+    add tests for fingerprint128
+
+commit 7a089a29876c43b0e9a88f3d780976d6a0b3f4b0
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun May 25 09:07:36 2014 +0200
+
+    fix overflow in fingerprint128
+
+commit ced72b5f975fbcfa7d839b4d7cc7043d9e8535f1
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun May 25 09:05:25 2014 +0200
+
+    fix accidental fallthrough on if/return
+
+commit 3a8b027f8435768cae9a164111b6d120886f2825
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun May 25 09:03:50 2014 +0200
+
+    slen needs to be signed -- we check <= 0
+
+commit f6133b835fa309a3500fdb49348e81fc6e33a523
+Author: Damian Gryski <damian@gryski.com>
+Date:   Sun May 25 09:03:15 2014 +0200
+
+    fix ordering of 128-bit hi/lo words
+
+commit dcba7e74ee0bd2e2134347ef9dfba201957a758d
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 20:58:10 2014 +0200
+
+    add fingerprinting and 128-bit hash
+
+commit 676d04c366434fd839939439b689846ab926edb8
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 20:57:49 2014 +0200
+
+    unexport cityhash internals
+
+commit c8f208760b05d8541eb58b562051ca27af07dd71
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 20:57:07 2014 +0200
+
+    deadcode--
+
+commit bc94144ea05aea43eb90645cd6359e580fb4aa33
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 13:55:26 2014 +0200
+
+    license++
+
+commit d84024f446ff8cb1fc8e2b9751ea6939f45adfc9
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 13:27:56 2014 +0200
+
+    unexport the internal routines
+
+commit aede7cd6ef44ea0b9ddfcf06ac75e1b50fc326aa
+Author: Damian Gryski <damian@gryski.com>
+Date:   Wed May 21 13:21:46 2014 +0200
+
+    initial commit

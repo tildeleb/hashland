@@ -10,12 +10,12 @@ import (
 	"time"
 	"unsafe"
 
-	farm "github.com/dgryski/go-farm"
 	"github.com/jzelinskie/whirlpool"
 	"github.com/minio/blake2b-simd"
 	"leb.io/aeshash"
 	"leb.io/hashes/skein"
 	"leb.io/hashland/crapwow"
+	"leb.io/hashland/farm"
 	"leb.io/hashland/gomap"
 	"leb.io/hashland/jenkins"
 	"leb.io/hashland/keccak"
