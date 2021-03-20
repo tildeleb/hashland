@@ -2,15 +2,19 @@
 package jenkins_test
 
 //import "flag"
-import "fmt"
-import "time"
-import "unsafe"
+import (
+	"fmt"
+	"testing"
+	"time"
+	"unsafe"
+
+	"leb.io/hashland/jenkins"
+	"leb.io/hrff"
+)
+
 //import "math"
 //import "math/rand"
 //import "runtime"
-import "github.com/tildeleb/hashland/jenkins"
-import "github.com/tildeleb/hrff"
-import "testing"
 
 func stu(s string) []uint32 {
 	//fmt.Printf("stu: s=%q\n", s)
@@ -29,8 +33,8 @@ func stu(s string) []uint32 {
 }
 
 func tdiff(begin, end time.Time) time.Duration {
-    d := end.Sub(begin)
-    return d
+	d := end.Sub(begin)
+	return d
 }
 
 func TestCheck(t *testing.T) {
@@ -65,7 +69,7 @@ func TestBasic(t *testing.T) {
 		t.FailNow()
 	}
 
-  	b, c = 0xdeadbeef, 0xdeadbeef
+	b, c = 0xdeadbeef, 0xdeadbeef
 	c, b = jenkins.HashString("", c, b)
 	//fmt.Printf("%08x, %08x\n", c, b)	// 9c093ccd bd5b7dde
 	if c != 0x9c093ccd || b != 0xbd5b7dde {
@@ -107,7 +111,6 @@ func TestHash32v(t *testing.T) {
 		fmt.Printf("i=%03d, h=0x%08x, k=%v\n", i, h, k[:i]) // 0x8965bbe9
 	}
 }
-
 
 func TestHash32(t *testing.T) {
 	k := make([]byte, 4, 4)

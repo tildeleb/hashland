@@ -146,10 +146,11 @@ func (ht *HashTable) Insert(ka []byte) {
 	h := hashf.Hashf(k, ht.Seed) // jenkins.Hash232(k, 0)
 	if ht.prime {
 		idx = h % ht.Size
+		//fmt.Printf("idx=%d\n", idx)
 	} else {
 		idx = h & ht.SizeMask
 	}
-	//fmt.Printf("index=%d\n", idx)
+	//fmt.Printf("k=%d, idx=%d, ht.Size=%d, h=%#016x\n", btoi(k), idx, ht.Size, h)
 	cnt := 0
 	pass := 0
 
@@ -182,7 +183,7 @@ func (ht *HashTable) Insert(ka []byte) {
 			break
 		}
 		if ht.oa {
-			//fmt.Printf("Insert: col idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
+			//fmt.Printf("Insert: OA col idx=%d, len=%d, hash=0x%08x, key=%q\n", idx, len(ht.Buckets[idx]), h, ht.Buckets[idx][0].Key)
 			if cnt == 0 {
 				ht.Probes++
 			} else {

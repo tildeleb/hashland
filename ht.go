@@ -31,6 +31,7 @@ import (
 	"leb.io/hashland/keccakpg" // remove
 	"leb.io/hashland/nullhash" // remove
 	"leb.io/hashland/siphash"  // remove
+	"leb.io/hashland/spooky"
 )
 
 func ReadFile(file string, cb func(line string)) int {
@@ -216,7 +217,7 @@ func TestH(file string, lines int, hf2 string) (ht *HashTable) {
 // integers 0 to n
 func TestI(file string, lines int, hf2 string) (ht *HashTable) {
 	//r = rand.New(rand.NewSource(int64(bseed)))
-	//fmt.Printf("ni=%d\n", *ni)
+	fmt.Printf("n=%d, ni=%d\n", *n, *ni)
 	bs := make([]byte, 4, 4)
 	if *dru {
 		*n = -*n
@@ -283,6 +284,31 @@ func TestL(file string, lines int, hf2 string) (ht *HashTable) {
 	ht.Dur = tdiff(start, stop)
 	ht.Dups2 = hs.n - len(hs.m)
 	//fmt.Printf("collisions=%d\n", ht.Dups2)
+	return
+}
+
+// hash function mod test
+func TestM(file string, lines int, hf2 string) (ht *HashTable) {
+	//r = rand.New(rand.NewSource(int64(bseed)))
+	fmt.Printf("n=%d, ni=%d\n", *n, *ni)
+	bs := make([]byte, 4, 4)
+	if *dru {
+		*n = -*n
+	}
+	hist := make([]int, *n)
+	ht = NewHashTable(*n, seed, *extra, *pd, *oa, *prime) // ??? @@@
+	mod := uint64(*n)
+	start := time.Now()
+	for i := 0; i < *ni; i++ {
+		bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
+		h := Hashf(bs, ht.Seed)
+		hist[h%mod]++
+		//fmt.Printf("i=%d, 0x%08x\n", i, i)
+	}
+	stop := time.Now()
+	ht.Dur = tdiff(start, stop)
+	fmt.Printf("expected=%d\n", *ni / *n)
+	fmt.Printf("hist=%v\n", hist)
 	return
 }
 
@@ -481,7 +507,11 @@ func benchmark32s(n int) {
 		case 4:
 			start = time.Now()
 			for i := 0; i < n; i++ {
-				_ = aeshash.Hash(bs, 0)
+				//_ = aeshash.Hash(bs, 0)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				//_ = jenkins.Hash232(bs, 0)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				_ = spooky.Hash64(bs, 0)
 				// sha1160.Reset()
 				// sha1160.Write(bs)
 				// fp20 = fp20[0:0]
@@ -492,9 +522,6 @@ func benchmark32s(n int) {
 				//k224.Write(bs)
 				//_ = k224.Sum(nil)
 				//bs[0], bs[1], bs[2], bs[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
-				//_ = jenkins.Hash232(bs, 0)
-				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = gomap.Hash64(bs, 0)
 				//_ =  nhf64.Hash64S(bs, 0) // chnage below too
 				//nh.Reset()
@@ -511,18 +538,19 @@ func benchmark32s(n int) {
 		default:
 			start = time.Now()
 			for i := 0; i < n; i++ {
+				//_ = aeshash.Hash(bs, 0)
+				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
+				_ = spooky.Hash64(bs, 0)
 				// sha1160.Reset()
 				// sha1160.Write(bs)
 				// fp20 = fp20[0:0]
 				// fp20 = sha1160.Sum(fp20)
 				// _ = uint64(fp20[0])<<56 | uint64(fp20[1])<<48 | uint64(fp20[2])<<40 | uint64(fp20[3])<<32 |
 				// 	uint64(fp20[4])<<24 | uint64(fp20[5])<<16 | uint64(fp20[6])<<8  | uint64(fp20[7])<<0
-				_ = aeshash.Hash(bs, 0)
 				//k224.Reset()
 				//k224.Write(bs)
 				//_ = k224.Sum(nil)
 				//bs[0], bs[1], bs[2], bs[3], bs[4], bs[5], bs[6], bs[7] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24), byte(i>>32), byte(i>>40), byte(i>>48), byte(i>>56)
-				//_, _ = jenkins.Jenkins364(bs, 0, 0, 0)
 				//_ = aeshash.Hash(bs, 0)
 				//_ = gomap.Hash64(bs, 0)
 				//_ = siphash.Hash(0, 0, bs)
@@ -672,6 +700,7 @@ var Tests = []Test{
 	{"TestJ", &J, TestJ, "one bit keys (does not read file)"},
 	{"TestK", &K, TestK, "read file of keys and print hashes"},
 	{"TestL", &L, TestL, "all possible 3 byte keys"},
+	{"TestL", &M, TestM, "hash function mod test"},
 }
 
 func runTestsWithFileAndHashes(file string, lines int, hf []string) {
@@ -716,7 +745,7 @@ var file = flag.String("file", "", "words to read")
 var lines = flag.Int("lines", 0, "number of lines to read in file")
 var hf = flag.String("hf", "all", "hash function")
 var extra = flag.Int("e", 1, "extra bis in table size")
-var prime = flag.Bool("p", false, "table size is primes and use mod")
+var prime = flag.Bool("p", false, "table size is prime, use mod")
 var all = flag.Bool("a", false, "run all tests")
 var pd = flag.Bool("pd", false, "print duplicate hashes")
 var oa = flag.Bool("oa", false, "open addressing (no buckets)")
@@ -760,17 +789,18 @@ var I = flag.Bool("I", false, "test I")
 var J = flag.Bool("J", false, "test J")
 var K = flag.Bool("K", false, "test K")
 var L = flag.Bool("L", false, "test L")
+var M = flag.Bool("M", false, "test M")
 var S = flag.Bool("S", false, "test S")
 
 var letters = []string{"abcdefgh", "efghijkl", "ijklmnop", "mnopqrst", "qrstuvwx", "uvwxyz01"} // 262144 words
-var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K, &L}
+var TestPointers = []**bool{&A, &B, &C, &D, &E, &F, &G, &H, &I, &J, &K, &L, &M}
 
 func allTestsOn() {
-	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L = true, true, true, true, true, true, true, true, true, true, true
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L, *M = true, true, true, true, true, true, true, true, true, true, true, true
 }
 
 func allTestsOff() {
-	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L = false, false, false, false, false, false, false, false, false, false, false
+	*A, *B, *C, *D, *E, *F, *G, *H, *I, *J, *L, *M = false, false, false, false, false, false, false, false, false, false, false, false
 }
 
 func main() {
@@ -900,6 +930,7 @@ func main() {
 			allTestsOff()
 			*I, *J = true, true
 		}
+		fmt.Printf("here\n")
 		if *hf == "all" {
 			runTestsWithFileAndHashes("", *lines, TestHashFunctions)
 		} else {
