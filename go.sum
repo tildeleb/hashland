@@ -15,12 +15,11 @@ github.com/zhenjl/bloom v0.0.0-20151026233158-e24b032dccb1/go.mod h1:m5109HBotwh
 github.com/zhenjl/cityhash v0.0.0-20131128155616-cdd6a94144ab/go.mod h1:P6L88wrqK99Njntah9SB7AyzFpUXsXYq06LkjixxQmY=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-leb.io/aeshash v0.0.0-20190627052759-9e6b40329b3b h1:MG17Tc0pA3XmFTsPwklMMEfcos3pTFnVYM4A0YfVSbU=
 leb.io/aeshash v0.0.0-20190627052759-9e6b40329b3b/go.mod h1:BKjvdzZnV5WaMoO/kz/Fygl60dA79GTFQTSuKJmSdNs=
+leb.io/aeshash v0.1.0 h1:kBcHB0+ipESEgA7pAxZ6QfhYBiBaWjTQ1NBKqX7GyUE=
+leb.io/aeshash v0.1.0/go.mod h1:BKjvdzZnV5WaMoO/kz/Fygl60dA79GTFQTSuKJmSdNs=
 leb.io/cuckoo v0.1.2 h1:3/P44oEGwQ4E2xlRyvpPhvHQIvxHh5+VdanBbxRYhOk=
 leb.io/cuckoo v0.1.2/go.mod h1:EAn6JQBg65dcILMLuPbBRbkSjd6u+4KA+iTwBEUxBuQ=
-leb.io/hashes v0.1.1 h1:SZOy6rwkt/N9zaDtg7k0IhAEnarl4ieZh8rfZHkudZE=
-leb.io/hashes v0.1.1/go.mod h1:FjHpnSCaPTgHf+IkGEOVFtQfTXAQP5d0v6V2JmUNX8w=
 leb.io/hashland v0.0.0-20171003003232-07375b562dea/go.mod h1:OSwp5BNKniWS6joctn4Grabrxd2EERBB7pNzK9Ni3BQ=
 leb.io/hrff v0.1.0 h1:HAhaPEnNEJp7pCbH/qgCT0VMNMQC7I10unCRuu08cKc=
 leb.io/hrff v0.1.0/go.mod h1:EZ02Yctbwtxev2S/3jw6aKNrw2e/gkaaRk4fgnYFTec=
